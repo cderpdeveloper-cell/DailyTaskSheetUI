@@ -1,4 +1,3 @@
-import { env } from "@/utils/env.server";
 import { env as publicEnv } from "@/utils/env";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -14,7 +13,7 @@ async function handleProxy(
     const path = params.path.join("/");
     const targetUrl = `${publicEnv.NEXT_PUBLIC_API_BASE_URL}/api/${path}`;
     
-    // Create new headers from request, but override or add security ones
+    // Create new headers from request
     const proxyHeaders = new Headers();
     request.headers.forEach((value, key) => {
       // Forward standard headers, but let fetch handle Host and content-length
@@ -22,8 +21,6 @@ async function handleProxy(
         proxyHeaders.set(key, value);
       }
     });
-    
-    proxyHeaders.set("X-API-KEY", env.MY_API_KEY);
     
     // Capture the body if present
     const requestBody = request.method !== "GET" ? await request.text() : null;

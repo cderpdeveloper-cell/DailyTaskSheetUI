@@ -6,7 +6,6 @@ const axiosInstance: AxiosInstance = axios.create({
   baseURL: API_URL,
   headers: {
     "Content-Type": "application/json",
-    "X-API-KEY": process.env.MY_API_KEY || "", // Will be populated on the server side
   },
 });
 
