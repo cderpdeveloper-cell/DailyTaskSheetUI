@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: #111827; /* Force dark text for readability on light backgrounds */
+  background: #ffffff;
+  min-height: 100vh;
+}
+
+@layer components {
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-slate-50 text-slate-600;
+  }
+  
+  .sidebar-item-active {
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg bg-primary text-white font-bold shadow-sm shadow-primary/20;
+  }
+
+  .btn-primary {
+    @apply bg-primary hover:bg-primary-600 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-sm active:scale-95;
+  }
+
+  .input-field {
+    @apply w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary transition-colors text-sm;
+  }
+}
