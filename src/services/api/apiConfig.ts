@@ -3,8 +3,7 @@ import { env } from "@/utils/env";
 const isClient = typeof window !== "undefined";
 
 export const API_BASE_URL = env.NEXT_PUBLIC_API_BASE_URL;
-// Use a relative proxy URL on the client to keep secrets hidden
-export const API_URL = isClient ? "/api/proxy" : `${API_BASE_URL}/api`;
+export const API_URL = `${API_BASE_URL}/api`;
 
 /**
  * Helper to get the full URL for any resource (like images, logos, etc.)
