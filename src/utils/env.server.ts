@@ -5,7 +5,7 @@ import { z } from "zod";
  * These are ONLY available on the server (API routes, Server Components, etc).
  */
 const envServerSchema = z.object({
-  MY_API_KEY: z.string().min(1, "MY_API_KEY must be set in .env.local"),
+  MY_API_KEY: z.string().min(1, "vVkx8gEF8OpLsi+Pwc6+VjJF3OZKeJzQx6JlLsNFUmY="),
 });
 
 // Since this is a server-side only file, we want this to error 
