@@ -182,7 +182,7 @@ export default function EmailSettingsPage() {
 
   const lastLoadedContextRef = useRef<string | null>(null);
   
-  const DEFAULT_TEMPLATE_HTML = `
+  const DEFAULT_WORK_REPORT_HTML = `
 {{#Rows}}
   {{#FirstLog}}
     <div style='margin-top: 20px; font-family: sans-serif;'>
@@ -196,6 +196,52 @@ export default function EmailSettingsPage() {
     {{DescriptionStatus}}
   </div>
 {{/Rows}}
+`.trim();
+
+  const DEFAULT_DAILY_TASK_HTML = `
+<table border="1" style="width:100%; border-collapse: collapse; border: 1.5px solid #333; font-family: Arial, sans-serif; font-size: 13px;">
+  <thead>
+    <tr style="background:#fff; font-weight: bold;">
+      <th style="border: 1.5px solid #333; padding: 12px; width: 40px; text-align: center;">SR</th>
+      <th style="border: 1.5px solid #333; padding: 12px; text-align: left;">Work</th>
+      <th style="border: 1.5px solid #333; padding: 12px; width: 80px; text-align: center;">Start</th>
+      <th style="border: 1.5px solid #333; padding: 12px; width: 80px; text-align: center;">End</th>
+      <th style="border: 1.5px solid #333; padding: 12px; width: 80px; text-align: center;">Hours</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#Rows}}
+      <!-- 👇 The first log gets the merged Task Details -->
+      {{#FirstLog}}
+      <tr>
+        <td rowspan="{{RowSpan}}" style="border: 1.5px solid #333; padding: 12px; text-align: center; vertical-align: top;">{{SrNo}}</td>
+        <td rowspan="{{RowSpan}}" style="border: 1.5px solid #333; padding: 12px; vertical-align: top;">
+            <div style="font-weight: bold; margin-bottom: 5px;">
+               {{Title}} 
+               <span style="color: #2ecc71;">({{Project}})</span>
+               <span style="color: #3b82f6;">({{Status}})</span>
+            </div>
+            <div style="font-size: 12px; color: #333;">
+               {{Description}}
+            </div>
+        </td>
+        <td style="border: 1.5px solid #333; padding: 12px; text-align: center;">{{StartTime}}</td>
+        <td style="border: 1.5px solid #333; padding: 12px; text-align: center;">{{EndTime}}</td>
+        <td style="border: 1.5px solid #333; padding: 12px; text-align: center; font-weight: bold;">{{Duration}}</td>
+      </tr>
+      {{/FirstLog}}
+
+      <!-- 👇 Extra logs only add the time columns -->
+      {{#OtherLogs}}
+      <tr>
+        <td style="border: 1.5px solid #333; padding: 12px; text-align: center;">{{StartTime}}</td>
+        <td style="border: 1.5px solid #333; padding: 12px; text-align: center;">{{EndTime}}</td>
+        <td style="border: 1.5px solid #333; padding: 12px; text-align: center; font-weight: bold;">{{Duration}}</td>
+      </tr>
+      {{/OtherLogs}}
+    {{/Rows}}
+  </tbody>
+</table>
 `.trim();
 
   const templateMutation = useMutation({
@@ -219,8 +265,8 @@ export default function EmailSettingsPage() {
     if (lastLoadedContextRef.current !== currentContext) {
         templateForm.reset({
             templateName: templateData?.templateName || CONTEXT_LABELS[reportContext],
-            subjectFormat: templateData?.subjectFormat || "Daily Work Report - {{Date}}",
-            bodyHtml: templateData?.bodyHtml || DEFAULT_TEMPLATE_HTML,
+            subjectFormat: templateData?.subjectFormat || (reportContext === 'workReport' ? "Daily Work Report - {{Date}}" : "Daily Task Sheet - {{Date}}"),
+            bodyHtml: templateData?.bodyHtml || (reportContext === 'workReport' ? DEFAULT_WORK_REPORT_HTML : DEFAULT_DAILY_TASK_HTML),
             tableConfigJson: templateData?.tableConfigJson || JSON.stringify({ srNo: true, project: true, status: true, title: true, description: true, inTime: true, outTime: true, duration: true, mode: true, team: true }),
         });
         lastLoadedContextRef.current = currentContext;
@@ -242,12 +288,13 @@ export default function EmailSettingsPage() {
   ];
 
   const dailyTaskFields = [
-    { label: 'Project Name', placeholder: '{{ProjectName}}' },
-    { label: 'Work Description', placeholder: '{{Description}}' },
+    { label: 'Project', placeholder: '{{Project}}' },
     { label: 'Work Title', placeholder: '{{Title}}' },
-    { label: 'Task Status', placeholder: '{{StatusName}}' },
-    { label: 'Total Duration', placeholder: '{{Time}}' },
-    { label: 'Other Team', placeholder: '{{OtherEmployeeIds}}' },
+    { label: 'Work Description', placeholder: '{{Description}}' },
+    { label: 'Status', placeholder: '{{Status}}' },
+    { label: 'Start Time', placeholder: '{{StartTime}}' },
+    { label: 'End Time', placeholder: '{{EndTime}}' },
+    { label: 'Duration', placeholder: '{{Duration}}' },
     { label: 'Desc + Status', placeholder: '{{DescriptionStatus}}' }
   ];
 
@@ -256,7 +303,10 @@ export default function EmailSettingsPage() {
     { label: 'End Rows', placeholder: '{{/Rows}}' },
     { label: 'Print Once Only', placeholder: '{{#FirstLog}}' },
     { label: 'End Once Only', placeholder: '{{/FirstLog}}' },
-    { label: 'Row Span', placeholder: '{{RowSpan}}' }
+    { label: 'Start Other Logs', placeholder: '{{#OtherLogs}}' },
+    { label: 'End Other Logs', placeholder: '{{/OtherLogs}}' },
+    { label: 'Row Span', placeholder: '{{RowSpan}}' },
+    { label: 'Serial No', placeholder: '{{SrNo}}' }
   ];
 
   const insertPlaceholder = (placeholder: string) => {
