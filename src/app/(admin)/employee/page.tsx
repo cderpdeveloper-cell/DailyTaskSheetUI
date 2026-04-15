@@ -29,6 +29,7 @@ import { masterService } from "@/services/api/master.service";
 import { roleService, Role } from "@/services/api/role.service";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useConfirmStore } from "@/store/useConfirmStore";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { cn } from "@/utils/cn";
 import { toast } from "sonner";
 
@@ -58,6 +59,8 @@ export default function EmployeeMasterPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const companyId = user?.companyId || 1;
+
+  const { canCreate, canEdit, canDelete } = usePagePermissions("employeemaster");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
@@ -258,18 +261,22 @@ export default function EmployeeMasterPage() {
       header: "Actions",
       accessor: (item: Employee) => (
         <div className="flex items-center gap-2 group-hover:opacity-100 transition-opacity">
-          <button 
-            onClick={() => handleEdit(item)}
-            className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-primary transition-colors"
-          >
-            <Edit className="w-4 h-4" />
-          </button>
-          <button 
-            onClick={() => handleDelete(item.employeeId)}
-            className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          {canEdit && (
+            <button 
+              onClick={() => handleEdit(item)}
+              className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-primary transition-colors"
+            >
+              <Edit className="w-4 h-4" />
+            </button>
+          )}
+          {canDelete && (
+            <button 
+              onClick={() => handleDelete(item.employeeId)}
+              className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       )
     }
@@ -286,10 +293,12 @@ export default function EmployeeMasterPage() {
           <p className="text-gray-500 mt-1 font-medium">Manage your team members and their roles.</p>
         </div>
         
-        <Button onClick={handleOpenAdd} className="gap-2 px-6 shadow-xl shadow-primary/20">
-          <UserPlus className="w-5 h-5" />
-          Add Team Member
-        </Button>
+        {canCreate && (
+          <Button onClick={handleOpenAdd} className="gap-2 px-6 shadow-xl shadow-primary/20">
+            <UserPlus className="w-5 h-5" />
+            Add Team Member
+          </Button>
+        )}
       </div>
 
       <div className="flex items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">

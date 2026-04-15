@@ -23,6 +23,7 @@ import { Select } from "@/components/ui/Select";
 import { roleService, Role, Permission } from "@/services/api/role.service";
 import { masterService } from "@/services/api/master.service";
 import { useAuthStore } from "@/store/useAuthStore";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { cn } from "@/utils/cn";
 import { toast } from "sonner";
 
@@ -30,6 +31,8 @@ export default function RoleMasterPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const companyId = user?.companyId || 1;
+
+  const { canCreate, canEdit, canDelete } = usePagePermissions("rolemaster");
 
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
@@ -164,10 +167,12 @@ export default function RoleMasterPage() {
           <p className="text-gray-500 mt-1 font-medium italic">Define organizational roles and set granular permissions.</p>
         </div>
 
-        <Button onClick={() => setIsRoleModalOpen(true)} className="gap-2 px-6 shadow-xl shadow-primary/20">
-          <Plus className="w-5 h-5" />
-          Create New Role
-        </Button>
+        {canCreate && (
+          <Button onClick={() => setIsRoleModalOpen(true)} className="gap-2 px-6 shadow-xl shadow-primary/20">
+            <Plus className="w-5 h-5" />
+            Create New Role
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -189,18 +194,22 @@ export default function RoleMasterPage() {
 
                 {openMenuId === role.roleMasterId && (
                   <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-xl border border-gray-100 py-1 z-10 animate-in zoom-in-95 duration-200">
-                    <button
-                      onClick={() => handleEdit(role)}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                    >
-                      <Edit className="w-4 h-4" /> Edit Role
-                    </button>
-                    <button
-                      onClick={() => handleDeleteClick(role.roleMasterId)}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                    >
-                      <Trash2 className="w-4 h-4" /> Delete Role
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={() => handleEdit(role)}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                      >
+                        <Edit className="w-4 h-4" /> Edit Role
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        onClick={() => handleDeleteClick(role.roleMasterId)}
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" /> Delete Role
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

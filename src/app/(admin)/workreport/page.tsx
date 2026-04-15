@@ -13,6 +13,7 @@ import { clientService } from "@/services/api/client.service";
 import { statusService } from "@/services/api/status.service";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useConfirmStore } from "@/store/useConfirmStore";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 
 // --- Clean Search Select Component ---
 
@@ -69,6 +70,8 @@ export default function WorkReportPage() {
    const confirm = useConfirmStore((state) => state.confirm);
    const employeeId = user?.employeeID || 0;
    const companyId = user?.companyId || 0;
+
+   const { canCreate, canEdit, canDelete } = usePagePermissions("workreport");
 
    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -230,9 +233,11 @@ export default function WorkReportPage() {
                <div>
                   <h2 className="text-xl font-bold text-slate-800">Daily Task Sheet</h2>
                </div>
-               <button onClick={addClientSession} className="h-10 px-5 bg-slate-800 text-white rounded-lg font-bold text-xs flex items-center gap-3 hover:bg-slate-900 transition-all active:scale-95">
-                  <Plus className="w-4 h-4" /> Add Entry <span className="opacity-40 text-[9px] font-mono">[ALT+N]</span>
-               </button>
+               {canCreate && (
+                 <button onClick={addClientSession} className="h-10 px-5 bg-slate-800 text-white rounded-lg font-bold text-xs flex items-center gap-3 hover:bg-slate-900 transition-all active:scale-95">
+                   <Plus className="w-4 h-4" /> Add Entry <span className="opacity-40 text-[9px] font-mono">[ALT+N]</span>
+                 </button>
+               )}
             </div>
 
             {/* 🏗️ WORKSPACE GRID */}
@@ -366,20 +371,24 @@ export default function WorkReportPage() {
                            <div className="flex items-center justify-between">
                               <div className="font-bold text-slate-700 text-sm flex items-center gap-3"><Calendar className="w-4 h-4 text-blue-500" /> {new Date(h.workDate).toLocaleDateString()}</div>
                               <div className="flex gap-2">
-                                 <button onClick={() => loadSessionForEdit(h.workDate.split('T')[0])} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all"><Edit2 className="w-4 h-4" /></button>
-                                 <button 
-                                     onClick={() => {
-                                         confirm({
-                                             title: "Delete Audit?",
-                                             message: "Are you sure you want to delete this daily audit permanently?",
-                                             variant: "danger",
-                                             onConfirm: () => deleteSessionMutation.mutate(h.workDate.split('T')[0])
-                                         });
-                                     }} 
-                                     className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all"
-                                 >
-                                     <Trash2 className="w-4 h-4" />
-                                 </button>
+                                 {canEdit && (
+                                   <button onClick={() => loadSessionForEdit(h.workDate.split('T')[0])} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all"><Edit2 className="w-4 h-4" /></button>
+                                 )}
+                                 {canDelete && (
+                                   <button 
+                                       onClick={() => {
+                                           confirm({
+                                               title: "Delete Audit?",
+                                               message: "Are you sure you want to delete this daily audit permanently?",
+                                               variant: "danger",
+                                               onConfirm: () => deleteSessionMutation.mutate(h.workDate.split('T')[0])
+                                           });
+                                       }} 
+                                       className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all"
+                                   >
+                                       <Trash2 className="w-4 h-4" />
+                                   </button>
+                                 )}
                               </div>
                            </div>
                            <button

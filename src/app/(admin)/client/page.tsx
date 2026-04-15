@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { clientService, Client } from "@/services/api/client.service";
 import { useAuthStore } from "@/store/useAuthStore";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { toast } from "sonner";
 
 const getErrorMessage = (err: any) => {
@@ -39,6 +40,8 @@ export default function ClientMasterPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const companyId = user?.companyId || 1;
+
+  const { canCreate, canEdit, canDelete } = usePagePermissions("clientmaster");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -121,10 +124,12 @@ export default function ClientMasterPage() {
           <p className="text-gray-500 mt-1 font-medium">Manage your external client partnerships.</p>
         </div>
 
-        <Button onClick={handleOpenAdd} className="gap-2 px-6 shadow-xl shadow-primary/20">
-          <Plus className="w-5 h-5" />
-          Register New Client
-        </Button>
+        {canCreate && (
+          <Button onClick={handleOpenAdd} className="gap-2 px-6 shadow-xl shadow-primary/20">
+            <Plus className="w-5 h-5" />
+            Register New Client
+          </Button>
+        )}
       </div>
 
       <div className="flex items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
@@ -152,14 +157,20 @@ export default function ClientMasterPage() {
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-xl uppercase">
                   {client.clientName[0]}
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => handleEdit(client)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-primary transition-colors">
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => deleteMutation.mutate(client.clientId)} className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+                {(canEdit || canDelete) && (
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {canEdit && (
+                      <button onClick={() => handleEdit(client)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-primary transition-colors">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button onClick={() => deleteMutation.mutate(client.clientId)} className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               <h3 className="text-lg font-bold text-gray-900 mb-2 truncate">{client.clientName}</h3>

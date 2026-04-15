@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { projectService, Project } from "@/services/api/project.service";
 import { useAuthStore } from "@/store/useAuthStore";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { toast } from "sonner";
 
 const getErrorMessage = (err: any) => {
@@ -41,6 +42,8 @@ export default function ProjectMasterPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const companyId = user?.companyId || 1;
+
+  const { canCreate, canEdit, canDelete } = usePagePermissions("projectmaster");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
@@ -131,10 +134,12 @@ export default function ProjectMasterPage() {
           <p className="text-gray-500 mt-1 font-medium">Coordinate and track all organizational projects.</p>
         </div>
 
-        <Button onClick={handleOpenAdd} className="gap-2 px-6 shadow-xl shadow-primary/20">
-          <Plus className="w-5 h-5" />
-          Create New Project
-        </Button>
+        {canCreate && (
+          <Button onClick={handleOpenAdd} className="gap-2 px-6 shadow-xl shadow-primary/20">
+            <Plus className="w-5 h-5" />
+            Create New Project
+          </Button>
+        )}
       </div>
 
       <div className="flex items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
@@ -165,14 +170,20 @@ export default function ProjectMasterPage() {
                 >
                   {project.projectName[0].toUpperCase()}
                 </div>
-                <div className="flex items-center gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => handleEdit(project)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-primary transition-colors">
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => deleteMutation.mutate(project.projectId)} className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+                {(canEdit || canDelete) && (
+                  <div className="flex items-center gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
+                    {canEdit && (
+                      <button onClick={() => handleEdit(project)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-primary transition-colors">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button onClick={() => deleteMutation.mutate(project.projectId)} className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               <h3 className="text-xl font-bold text-gray-900 mb-6 truncate">{project.projectName}</h3>

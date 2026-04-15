@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { companyService } from "@/services/api/company.service";
 import { useAuthStore } from "@/store/useAuthStore";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { getFullUrl } from "@/services/api/apiConfig";
 import { toast } from "sonner";
 
@@ -37,6 +38,8 @@ export default function CompanyProfilePage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const companyId = user?.companyId || 1; 
+
+  const { canEdit } = usePagePermissions("companymaster");
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -116,10 +119,12 @@ export default function CompanyProfilePage() {
           </h1>
           <p className="text-gray-500 mt-1 font-medium italic">Manage your organization's core information.</p>
         </div>
-        <Button onClick={handleSubmit(onSubmit)} className="gap-2 px-6 shadow-xl shadow-primary/20" isLoading={mutation.isPending}>
-          <Save className="w-5 h-5" />
-          Update Settings
-        </Button>
+        {canEdit && (
+          <Button onClick={handleSubmit(onSubmit)} className="gap-2 px-6 shadow-xl shadow-primary/20" isLoading={mutation.isPending}>
+            <Save className="w-5 h-5" />
+            Update Settings
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -137,19 +142,23 @@ export default function CompanyProfilePage() {
                   <Building2 className="w-16 h-16" />
                 </div>
               )}
-              <label 
-                htmlFor="logo-upload" 
-                className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] py-2 cursor-pointer opacity-0 group-hover:opacity-100 transition-all uppercase tracking-widest font-bold font-mono"
-              >
-                Change Logo
-              </label>
-              <input 
-                id="logo-upload" 
-                type="file" 
-                className="hidden" 
-                accept="image/*" 
-                onChange={onLogoChange} 
-              />
+              {canEdit && (
+                <>
+                  <label 
+                    htmlFor="logo-upload" 
+                    className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] py-2 cursor-pointer opacity-0 group-hover:opacity-100 transition-all uppercase tracking-widest font-bold font-mono"
+                  >
+                    Change Logo
+                  </label>
+                  <input 
+                    id="logo-upload" 
+                    type="file" 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={onLogoChange} 
+                  />
+                </>
+              )}
             </div>
             
             <div className="space-y-1">

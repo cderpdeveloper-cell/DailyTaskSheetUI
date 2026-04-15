@@ -20,6 +20,7 @@ import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
 import { moduleService, Module } from "@/services/api/module.service";
 import { useAuthStore } from "@/store/useAuthStore";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { toast } from "sonner";
 
 const getErrorMessage = (err: any) => {
@@ -40,6 +41,8 @@ export default function ModuleMasterPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const companyId = user?.companyId || 1;
+
+  const { canCreate, canEdit, canDelete } = usePagePermissions("modulemaster");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<Module | null>(null);
@@ -121,10 +124,12 @@ export default function ModuleMasterPage() {
           <p className="text-gray-500 mt-1 font-medium">Standardize features and hierarchy across projects.</p>
         </div>
 
-        <Button onClick={handleOpenAdd} className="gap-2 px-6 shadow-xl shadow-primary/20">
-          <Plus className="w-5 h-5" />
-          Define New Module
-        </Button>
+        {canCreate && (
+          <Button onClick={handleOpenAdd} className="gap-2 px-6 shadow-xl shadow-primary/20">
+            <Plus className="w-5 h-5" />
+            Define New Module
+          </Button>
+        )}
       </div>
 
       <div className="flex items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
@@ -152,14 +157,20 @@ export default function ModuleMasterPage() {
                 <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
                   <Layers className="w-5 h-5" />
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => handleEdit(mod)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-primary transition-colors">
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={() => deleteMutation.mutate(mod.moduleId)} className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                {(canEdit || canDelete) && (
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {canEdit && (
+                      <button onClick={() => handleEdit(mod)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-primary transition-colors">
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button onClick={() => deleteMutation.mutate(mod.moduleId)} className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               <h3 className="font-bold text-gray-900 mb-1 truncate">{mod.moduleName}</h3>

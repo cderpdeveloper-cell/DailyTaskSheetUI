@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { mailTemplateService, MailTemplate } from "@/services/api/mailTemplate.service";
 import { menuService } from "@/services/api/menu.service";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { MenuItem } from "@/types/api.types";
 
 // Zod Schemas
@@ -64,6 +65,8 @@ export default function EmailSettingsPage() {
   const employeeId = user?.employeeID || 1;
   const companyId = user?.companyId || 1;
   const confirm = useConfirmStore((state) => state.confirm);
+
+  const { canCreate, canEdit, canDelete } = usePagePermissions("emailsettings");
 
   const roleId = useMemo(() => {
     if (!user) return 1;
@@ -359,25 +362,29 @@ export default function EmailSettingsPage() {
       accessor: (item: EmailRecipient) => {
         
         return (
-          <button 
-            onClick={() => {
-              confirm({
-                title: "Remove Recipient?",
-                message: `Are you sure you want to remove ${item.email}? They will no longer receive automated reports.`,
-                variant: "danger",
-                confirmText: "Remove Now",
-                onConfirm: () => {
-                   emailSettingsService.deleteRecipient(item.id).then(() => {
-                     queryClient.invalidateQueries({ queryKey: ["emailRecipients", employeeId] });
-                     toast.success("Recipient removed successfully");
-                   });
-                }
-              });
-            }}
-            className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {canDelete && (
+              <button 
+                onClick={() => {
+                  confirm({
+                    title: "Remove Recipient?",
+                    message: `Are you sure you want to remove ${item.email}? They will no longer receive automated reports.`,
+                    variant: "danger",
+                    confirmText: "Remove Now",
+                    onConfirm: () => {
+                       emailSettingsService.deleteRecipient(item.id).then(() => {
+                         queryClient.invalidateQueries({ queryKey: ["emailRecipients", employeeId] });
+                         toast.success("Recipient removed successfully");
+                       });
+                    }
+                  });
+                }}
+                className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         );
       }
     }
@@ -445,9 +452,11 @@ export default function EmailSettingsPage() {
                         </div>
                         <Input {...smtpForm.register("senderEmail")} label="Sender Email" />
                         <Input {...smtpForm.register("password")} label="App Password" type="password" />
-                        <Button type="submit" className="w-full h-12 text-xs font-bold bg-slate-800 rounded-xl shadow-lg shadow-slate-200" isLoading={smtpMutation.isPending}>
-                            <Save className="w-4 h-4 mr-2" /> Save Configuration
-                        </Button>
+                        {canEdit && (
+                            <Button type="submit" className="w-full h-12 text-xs font-bold bg-slate-800 rounded-xl shadow-lg shadow-slate-200" isLoading={smtpMutation.isPending}>
+                                <Save className="w-4 h-4 mr-2" /> Save Configuration
+                            </Button>
+                        )}
                     </form>
                 </div>
             </div>
@@ -456,7 +465,9 @@ export default function EmailSettingsPage() {
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden min-h-[500px]">
                     <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                         <h3 className="font-bold text-slate-800 text-[10px] uppercase tracking-widest">Broadcast Targets</h3>
-                        <Button variant="outline" size="sm" onClick={() => setIsRecipientModalOpen(true)} className="h-8 text-[9px] font-black tracking-[0.2em]"><Plus className="w-3 h-3" /> ADD TARGET</Button>
+                        {canCreate && (
+                            <Button variant="outline" size="sm" onClick={() => setIsRecipientModalOpen(true)} className="h-8 text-[9px] font-black tracking-[0.2em]"><Plus className="w-3 h-3" /> ADD TARGET</Button>
+                        )}
                     </div>
                     <Table data={recipients} columns={columns} isLoading={isRecipientsLoading} />
                 </div>
@@ -468,9 +479,11 @@ export default function EmailSettingsPage() {
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col flex-1">
                     <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                         <h3 className="font-bold text-slate-800 text-[10px] uppercase tracking-widest">Template Studio</h3>
-                        <Button onClick={templateForm.handleSubmit(data => templateMutation.mutate(data))} isLoading={templateMutation.isPending} className="bg-slate-800 hover:bg-slate-900 text-white h-8 px-4 rounded text-[9px] font-black uppercase tracking-widest gap-2">
-                             <Save className="w-3.5 h-3.5" /> Save Format
-                        </Button>
+                        {canEdit && (
+                            <Button onClick={templateForm.handleSubmit(data => templateMutation.mutate(data))} isLoading={templateMutation.isPending} className="bg-slate-800 hover:bg-slate-900 text-white h-8 px-4 rounded text-[9px] font-black uppercase tracking-widest gap-2">
+                                 <Save className="w-3.5 h-3.5" /> Save Format
+                            </Button>
+                        )}
                     </div>
 
                     <div className="p-6 space-y-6">
