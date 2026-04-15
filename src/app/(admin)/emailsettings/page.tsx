@@ -63,6 +63,7 @@ export default function EmailSettingsPage() {
   const user = useAuthStore((state) => state.user);
   const employeeId = user?.employeeID || 1;
   const companyId = user?.companyId || 1;
+  const confirm = useConfirmStore((state) => state.confirm);
 
   const roleId = useMemo(() => {
     if (!user) return 1;
@@ -356,7 +357,6 @@ export default function EmailSettingsPage() {
     {
       header: "Actions",
       accessor: (item: EmailRecipient) => {
-        const confirm = useConfirmStore((state) => state.confirm);
         
         return (
           <button 
