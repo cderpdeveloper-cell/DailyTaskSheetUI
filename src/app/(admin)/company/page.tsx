@@ -70,7 +70,7 @@ export default function CompanyProfilePage() {
   }, [companyData, setValue]);
 
   const mutation = useMutation({
-    mutationFn: (formData: FormData) => companyService.save(formData),
+    mutationFn: (formData: FormData) => companyService.update(formData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company", companyId] });
       toast.success("Company details updated successfully!");

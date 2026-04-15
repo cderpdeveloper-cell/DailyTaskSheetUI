@@ -6,7 +6,7 @@ export const companyService = {
     const response = await axiosInstance.get<ApiResponse<Company>>(`/CompanyMaster/${id}`);
     return response.data;
   },
-  
+
   save: async (formData: FormData): Promise<ApiResponse<any>> => {
     // Multipart upload for logo
     const response = await axiosInstance.post<ApiResponse<any>>("/CompanyMaster", formData, {
@@ -18,7 +18,8 @@ export const companyService = {
   },
 
   update: async (formData: FormData): Promise<ApiResponse<any>> => {
-    const response = await axiosInstance.put<ApiResponse<any>>("/CompanyMaster", formData, {
+    const id = formData.get("companyId");
+    const response = await axiosInstance.put<ApiResponse<any>>(`/CompanyMaster/${id}`, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
