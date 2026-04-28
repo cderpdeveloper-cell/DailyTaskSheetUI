@@ -64,4 +64,7 @@ export const taskSheetService = {
     
     sendEmail: (id: number) =>
         api.post<ApiResponse<boolean>>(`/Reports/${id}/send-email`),
+    
+    previewEmail: (id: number) =>
+        api.get<ApiResponse<string>>(`/Reports/${id}/preview-email`),
 };

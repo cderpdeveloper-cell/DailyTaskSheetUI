@@ -71,4 +71,7 @@ export const workLogService = {
     
     sendEmail: (id: number) =>
         api.post<ApiResponse<boolean>>(`/WorkLogs/${id}/send-email`),
+
+    previewEmail: (id: number) =>
+        api.get<ApiResponse<string>>(`/WorkLogs/${id}/preview-email`),
 };

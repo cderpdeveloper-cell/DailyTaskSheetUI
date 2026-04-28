@@ -10,7 +10,7 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "full";
 }
 
 export const Modal = ({
@@ -46,6 +46,7 @@ export const Modal = ({
     md: "max-w-lg",
     lg: "max-w-2xl",
     xl: "max-w-4xl",
+    full: "max-w-[95vw] h-[95vh]",
   };
 
   return (
@@ -73,7 +74,7 @@ export const Modal = ({
         </div>
 
         {/* Body */}
-        <div className="p-6 overflow-y-auto max-h-[70vh]">
+        <div className={cn("p-6 overflow-y-auto", size === "full" ? "flex-1" : "max-h-[70vh]")}>
           {children}
         </div>
 
