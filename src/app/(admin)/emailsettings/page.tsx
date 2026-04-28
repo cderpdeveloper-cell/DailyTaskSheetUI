@@ -15,7 +15,7 @@ import { useConfirmStore } from "@/store/useConfirmStore";
 import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import { Switch } from "@/components/ui/Switch";
-import { 
+import {
   Mail, Settings, Plus, Trash2, Shield, Server, Hash, User, Lock, Send, AlertCircle,
   Layout, FileText, Code, Eye, Layers, Palette, User as UserIcon, Info, Save
 } from "lucide-react";
@@ -53,10 +53,10 @@ type RecipientFormValues = z.infer<typeof recipientSchema>;
 type TemplateFormValues = z.infer<typeof templateSchema>;
 
 const getErrorMessage = (err: any) => {
-    if (err.response?.data?.errors) {
-        return Object.values(err.response.data.errors).flat().join(", ");
-    }
-    return err.response?.data?.message || err.message || "An unexpected error occurred";
+  if (err.response?.data?.errors) {
+    return Object.values(err.response.data.errors).flat().join(", ");
+  }
+  return err.response?.data?.message || err.message || "An unexpected error occurred";
 };
 
 export default function EmailSettingsPage() {
@@ -141,7 +141,7 @@ export default function EmailSettingsPage() {
 
   // Forms
   const smtpForm = useForm<SmtpFormValues>({ resolver: zodResolver(smtpSchema) });
-  const recipientForm = useForm<RecipientFormValues>({ 
+  const recipientForm = useForm<RecipientFormValues>({
     resolver: zodResolver(recipientSchema),
     defaultValues: { recipientType: 'To', activeStatus: true }
   });
@@ -163,7 +163,7 @@ export default function EmailSettingsPage() {
 
   // Mutations
   const smtpMutation = useMutation({
-    mutationFn: (data: SmtpFormValues) => 
+    mutationFn: (data: SmtpFormValues) =>
       emailSettingsService.saveSmtpSettings({ ...data, employeeId, emailSettingsId: smtpData?.emailSettingsId || 0 }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["smtpSettings", employeeId] });
@@ -173,7 +173,7 @@ export default function EmailSettingsPage() {
   });
 
   const recipientMutation = useMutation({
-    mutationFn: (data: RecipientFormValues) => 
+    mutationFn: (data: RecipientFormValues) =>
       emailSettingsService.saveRecipient({ ...data, employeeId, id: 0 }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["emailRecipients", employeeId] });
@@ -185,22 +185,51 @@ export default function EmailSettingsPage() {
   });
 
   const lastLoadedContextRef = useRef<string | null>(null);
-  
+
   const DEFAULT_WORK_REPORT_HTML = `
-{{#Rows}}
-  {{#FirstLog}}
-    <div style='margin-top: 20px; font-family: sans-serif;'>
-      <div style='font-size: 14px; font-weight: 800; color: #b91c1c; margin-bottom: 5px;'>
-        @ {{ClientName}} - {{ProjectName}} - {{Time}} - {{Mode}}
-      </div>
-    </div>
-  {{/FirstLog}}
-  
-  <div style='color: #1e293b; font-size: 13px; margin-top: 3px; padding-left: 10px; font-family: sans-serif;'>
-    {{DescriptionStatus}}
-  </div>
-{{/Rows}}
-`.trim();
+<table border="1" style="width:100%; border-collapse: collapse; border: 1.5px solid #333; font-family: Arial, sans-serif; font-size: 14px;">
+  <thead>
+    <tr style="background:#fff; font-weight: bold;">
+      <th style="border: 1.5px solid #333; padding: 12px; width: 40px; text-align: center;">SR</th>
+      <th style="border: 1.5px solid #333; padding: 12px; text-align: left;">Client Name</th>
+      <th style="border: 1.5px solid #333; padding: 12px; text-align: left;">Task Description</th>
+      <th style="border: 1.5px solid #333; padding: 12px; width: 80px; text-align: center;">Time</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#Rows}}
+      {{#FirstLog}}
+      <tr>
+        <td rowspan="{{RowSpan}}" style="border: 1.5px solid #333; padding: 12px; text-align: center; vertical-align: top;">{{SrNo}}</td>
+        <td rowspan="{{RowSpan}}" style="border: 1.5px solid #333; padding: 12px; vertical-align: top;">
+            <div style="font-weight: bold; margin-bottom: 5px; color: #b91c1c;">
+               {{ClientName}} 
+            </div>
+            <div style="font-size: 13px; color: #333;">
+               <span style="color: #3b82f6;">({{Mode}})</span>
+            </div>
+        </td>
+        <td style="border: 1.5px solid #333; padding: 12px; vertical-align: top;">
+            <div style="color: #1e293b; font-size: 14px;">
+               {{DescriptionStatus}}
+            </div>
+        </td>
+        <td rowspan="{{RowSpan}}" style="border: 1.5px solid #333; padding: 12px; text-align: center; font-weight: bold; vertical-align: top;">{{Time}}</td>
+      </tr>
+      {{/FirstLog}}
+      {{#OtherLogs}}
+      <tr>
+        <td style="border: 1.5px solid #333; padding: 12px; vertical-align: top;">
+            <div style="color: #1e293b; font-size: 14px;">
+               {{DescriptionStatus}}
+            </div>
+        </td>
+      </tr>
+      {{/OtherLogs}}
+    {{/Rows}}
+  </tbody>
+</table>
+  `.trim();
 
   const DEFAULT_DAILY_TASK_HTML = `
 <table border="1" style="width:100%; border-collapse: collapse; border: 1.5px solid #333; font-family: Arial, sans-serif; font-size: 13px;">
@@ -215,14 +244,13 @@ export default function EmailSettingsPage() {
   </thead>
   <tbody>
     {{#Rows}}
-      <!-- 👇 The first log gets the merged Task Details -->
       {{#FirstLog}}
       <tr>
         <td rowspan="{{RowSpan}}" style="border: 1.5px solid #333; padding: 12px; text-align: center; vertical-align: top;">{{SrNo}}</td>
         <td rowspan="{{RowSpan}}" style="border: 1.5px solid #333; padding: 12px; vertical-align: top;">
             <div style="font-weight: bold; margin-bottom: 5px;">
                {{Title}} 
-               <span style="color: #2ecc71;">({{Project}})</span>
+               <span style="color: #6D3BF7;">({{Project}})</span>
                <span style="color: #3b82f6;">({{Status}})</span>
             </div>
             <div style="font-size: 12px; color: #333;">
@@ -234,8 +262,6 @@ export default function EmailSettingsPage() {
         <td style="border: 1.5px solid #333; padding: 12px; text-align: center; font-weight: bold;">{{Duration}}</td>
       </tr>
       {{/FirstLog}}
-
-      <!-- 👇 Extra logs only add the time columns -->
       {{#OtherLogs}}
       <tr>
         <td style="border: 1.5px solid #333; padding: 12px; text-align: center;">{{StartTime}}</td>
@@ -249,10 +275,10 @@ export default function EmailSettingsPage() {
 `.trim();
 
   const templateMutation = useMutation({
-    mutationFn: (data: TemplateFormValues) => 
-      mailTemplateService.saveTemplate({ 
-        ...data, 
-        companyId, 
+    mutationFn: (data: TemplateFormValues) =>
+      mailTemplateService.saveTemplate({
+        ...data,
+        companyId,
         employeeId,
         id: templateData?.id || 0
       }),
@@ -267,13 +293,13 @@ export default function EmailSettingsPage() {
     // Populate or reset form when data arrives or context switches
     const currentContext = `personal-${reportContext}-${templateData?.id || 'new'}`;
     if (lastLoadedContextRef.current !== currentContext) {
-        templateForm.reset({
-            templateName: templateData?.templateName || CONTEXT_LABELS[reportContext],
-            subjectFormat: templateData?.subjectFormat || (reportContext === 'workReport' ? "Daily Work Report - {{Date}}" : "Daily Task Sheet - {{Date}}"),
-            bodyHtml: templateData?.bodyHtml || (reportContext === 'workReport' ? DEFAULT_WORK_REPORT_HTML : DEFAULT_DAILY_TASK_HTML),
-            tableConfigJson: templateData?.tableConfigJson || JSON.stringify({ srNo: true, project: true, status: true, title: true, description: true, inTime: true, outTime: true, duration: true, mode: true, team: true }),
-        });
-        lastLoadedContextRef.current = currentContext;
+      templateForm.reset({
+        templateName: templateData?.templateName || CONTEXT_LABELS[reportContext],
+        subjectFormat: templateData?.subjectFormat || (reportContext === 'workReport' ? "Daily Work Report - {{Date}}" : "Daily Task Sheet - {{Date}}"),
+        bodyHtml: templateData?.bodyHtml || (reportContext === 'workReport' ? DEFAULT_WORK_REPORT_HTML : DEFAULT_DAILY_TASK_HTML),
+        tableConfigJson: templateData?.tableConfigJson || JSON.stringify({ srNo: true, project: true, status: true, title: true, description: true, inTime: true, outTime: true, duration: true, mode: true, team: true }),
+      });
+      lastLoadedContextRef.current = currentContext;
     }
   }, [templateData, templateForm, reportContext]);
 
@@ -337,11 +363,10 @@ export default function EmailSettingsPage() {
     {
       header: "Category",
       accessor: (item: EmailRecipient) => (
-        <span className={`px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-wider ${
-          item.recipientType === 'CC' ? 'bg-orange-50 text-orange-600' : 
-          item.recipientType === 'BCC' ? 'bg-purple-50 text-purple-600' : 
-          'bg-blue-50 text-blue-600'
-        }`}>
+        <span className={`px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-wider ${item.recipientType === 'CC' ? 'bg-orange-50 text-orange-600' :
+          item.recipientType === 'BCC' ? 'bg-purple-50 text-purple-600' :
+            'bg-blue-50 text-blue-600'
+          }`}>
           {item.recipientType}
         </span>
       )
@@ -360,11 +385,11 @@ export default function EmailSettingsPage() {
     {
       header: "Actions",
       accessor: (item: EmailRecipient) => {
-        
+
         return (
           <div className="flex items-center gap-2">
             {canDelete && (
-              <button 
+              <button
                 onClick={() => {
                   confirm({
                     title: "Remove Recipient?",
@@ -372,10 +397,10 @@ export default function EmailSettingsPage() {
                     variant: "danger",
                     confirmText: "Remove Now",
                     onConfirm: () => {
-                       emailSettingsService.deleteRecipient(item.id).then(() => {
-                         queryClient.invalidateQueries({ queryKey: ["emailRecipients", employeeId] });
-                         toast.success("Recipient removed successfully");
-                       });
+                      emailSettingsService.deleteRecipient(item.id).then(() => {
+                        queryClient.invalidateQueries({ queryKey: ["emailRecipients", employeeId] });
+                        toast.success("Recipient removed successfully");
+                      });
                     }
                   });
                 }}
@@ -395,258 +420,258 @@ export default function EmailSettingsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-             Delivery Control
+            Delivery Control
           </h1>
           <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Configure SMTP, target recipients, and dynamic email styling.</p>
         </div>
 
         <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-100 w-fit">
-           <button 
-             onClick={() => setActiveTab('general')}
-             className={`px-5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'general' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-600'}`}
-           >
-              General Settings
-           </button>
-           {(hasWorkReportRight || hasDailyTaskRight) && (
-           <button 
-             onClick={() => setActiveTab('template')}
-             className={`px-5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'template' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-600'}`}
-           >
+          <button
+            onClick={() => setActiveTab('general')}
+            className={`px-5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'general' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            General Settings
+          </button>
+          {(hasWorkReportRight || hasDailyTaskRight) && (
+            <button
+              onClick={() => setActiveTab('template')}
+              className={`px-5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'template' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-600'}`}
+            >
               Output Template
-           </button>
-           )}
+            </button>
+          )}
         </div>
       </div>
 
       {activeTab === 'general' ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
-            <div className="lg:col-span-1">
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden sticky top-24">
-                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-                        <h3 className="font-bold text-slate-800 text-[10px] uppercase tracking-widest">SMTP Gateway</h3>
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden sticky top-24">
+              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
+                <h3 className="font-bold text-slate-800 text-[10px] uppercase tracking-widest">SMTP Gateway</h3>
+              </div>
+              <form onSubmit={smtpForm.handleSubmit((data) => smtpMutation.mutate(data))} className="p-6 space-y-4">
+                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl mb-2 border border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <div className={cn("p-2 rounded-lg", smtpForm.watch("activeStatus") ? "bg-emerald-500/10 text-emerald-600" : "bg-slate-200 text-slate-400")}>
+                      <Shield className="w-4 h-4" />
                     </div>
-                    <form onSubmit={smtpForm.handleSubmit((data) => smtpMutation.mutate(data))} className="p-6 space-y-4">
-                        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl mb-2 border border-slate-100">
-                            <div className="flex items-center gap-3">
-                                <div className={cn("p-2 rounded-lg", smtpForm.watch("activeStatus") ? "bg-emerald-500/10 text-emerald-600" : "bg-slate-200 text-slate-400")}>
-                                    <Shield className="w-4 h-4" />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-900">Email Service</p>
-                                    <p className="text-[9px] text-slate-400 font-bold uppercase">{smtpForm.watch("activeStatus") ? "Active & Ready" : "Currently Paused"}</p>
-                                </div>
-                            </div>
-                            <Switch 
-                                checked={smtpForm.watch("activeStatus")} 
-                                onChange={(checked: boolean) => smtpForm.setValue("activeStatus", checked)} 
-                            />
-                        </div>
-                        <Input {...smtpForm.register("smtpServer")} label="SMTP Server" placeholder="smtp.gmail.com" />
-                        <div className="grid grid-cols-3 gap-4">
-                            <div className="col-span-1">
-                                <Input {...smtpForm.register("port")} label="Port" type="number" />
-                            </div>
-                            <div className="col-span-2">
-                                <Input {...smtpForm.register("senderName")} label="Display Name" />
-                            </div>
-                        </div>
-                        <Input {...smtpForm.register("senderEmail")} label="Sender Email" />
-                        <Input {...smtpForm.register("password")} label="App Password" type="password" />
-                        {canEdit && (
-                            <Button type="submit" className="w-full h-12 text-xs font-bold bg-slate-800 rounded-xl shadow-lg shadow-slate-200" isLoading={smtpMutation.isPending}>
-                                <Save className="w-4 h-4 mr-2" /> Save Configuration
-                            </Button>
-                        )}
-                    </form>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-900">Email Service</p>
+                      <p className="text-[9px] text-slate-400 font-bold uppercase">{smtpForm.watch("activeStatus") ? "Active & Ready" : "Currently Paused"}</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={smtpForm.watch("activeStatus")}
+                    onChange={(checked: boolean) => smtpForm.setValue("activeStatus", checked)}
+                  />
                 </div>
+                <Input {...smtpForm.register("smtpServer")} label="SMTP Server" placeholder="smtp.gmail.com" />
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="col-span-1">
+                    <Input {...smtpForm.register("port")} label="Port" type="number" />
+                  </div>
+                  <div className="col-span-2">
+                    <Input {...smtpForm.register("senderName")} label="Display Name" />
+                  </div>
+                </div>
+                <Input {...smtpForm.register("senderEmail")} label="Sender Email" />
+                <Input {...smtpForm.register("password")} label="App Password" type="password" />
+                {canEdit && (
+                  <Button type="submit" className="w-full h-12 text-xs font-bold bg-slate-800 rounded-xl shadow-lg shadow-slate-200" isLoading={smtpMutation.isPending}>
+                    <Save className="w-4 h-4 mr-2" /> Save Configuration
+                  </Button>
+                )}
+              </form>
             </div>
+          </div>
 
-            <div className="lg:col-span-2">
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden min-h-[500px]">
-                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-                        <h3 className="font-bold text-slate-800 text-[10px] uppercase tracking-widest">Broadcast Targets</h3>
-                        {canCreate && (
-                            <Button variant="outline" size="sm" onClick={() => setIsRecipientModalOpen(true)} className="h-8 text-[9px] font-black tracking-[0.2em]"><Plus className="w-3 h-3" /> ADD TARGET</Button>
-                        )}
-                    </div>
-                    <Table data={recipients} columns={columns} isLoading={isRecipientsLoading} />
-                </div>
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden min-h-[500px]">
+              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                <h3 className="font-bold text-slate-800 text-[10px] uppercase tracking-widest">Broadcast Targets</h3>
+                {canCreate && (
+                  <Button variant="outline" size="sm" onClick={() => setIsRecipientModalOpen(true)} className="h-8 text-[9px] font-black tracking-[0.2em]"><Plus className="w-3 h-3" /> ADD TARGET</Button>
+                )}
+              </div>
+              <Table data={recipients} columns={columns} isLoading={isRecipientsLoading} />
             </div>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
-            <div className="lg:col-span-8 flex flex-col gap-6">
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col flex-1">
-                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-                        <h3 className="font-bold text-slate-800 text-[10px] uppercase tracking-widest">Template Studio</h3>
-                        {canEdit && (
-                            <Button onClick={templateForm.handleSubmit(data => templateMutation.mutate(data))} isLoading={templateMutation.isPending} className="bg-slate-800 hover:bg-slate-900 text-white h-8 px-4 rounded text-[9px] font-black uppercase tracking-widest gap-2">
-                                 <Save className="w-3.5 h-3.5" /> Save Format
-                            </Button>
-                        )}
-                    </div>
+          <div className="lg:col-span-8 flex flex-col gap-6">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col flex-1">
+              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                <h3 className="font-bold text-slate-800 text-[10px] uppercase tracking-widest">Template Studio</h3>
+                {canEdit && (
+                  <Button onClick={templateForm.handleSubmit(data => templateMutation.mutate(data))} isLoading={templateMutation.isPending} className="bg-slate-800 hover:bg-slate-900 text-white h-8 px-4 rounded text-[9px] font-black uppercase tracking-widest gap-2">
+                    <Save className="w-3.5 h-3.5" /> Save Format
+                  </Button>
+                )}
+              </div>
 
-                    <div className="p-6 space-y-6">
-                        <div className="flex items-center justify-between gap-4 p-1 bg-slate-100 rounded-lg w-full">
-                            {hasWorkReportRight && (
-                            <button 
-                                onClick={() => setReportContext('workReport')}
-                                className={cn(
-                                    "flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-md transition-all",
-                                    reportContext === 'workReport' ? "bg-blue-600 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"
-                                )}
-                            >
-                                Work Report Mode
-                            </button>
-                            )}
-                            {hasDailyTaskRight && (
-                            <button 
-                                onClick={() => setReportContext('dailyTask')}
-                                className={cn(
-                                    "flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-md transition-all",
-                                    reportContext === 'dailyTask' ? "bg-emerald-600 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"
-                                )}
-                            >
-                                Daily Task Sheet Mode
-                            </button>
-                            )}
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 opacity-70">Internal Format Name</label>
-                                <input {...templateForm.register("templateName")} className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-slate-800 focus:ring-0 outline-none" />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 opacity-70">Automatic Email Subject</label>
-                                <input {...templateForm.register("subjectFormat")} className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-slate-800 focus:ring-0 outline-none" />
-                            </div>
-                        </div>
-
-                        <div className="space-y-6">
-                            <div className="p-4 border border-slate-100 bg-slate-50/50 rounded-xl space-y-4">
-                                <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1 text-slate-400">Step 1: Universal Headers & Logic</p>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {headerFields.map((f, i) => (
-                                            <button key={i} type="button" onClick={() => insertPlaceholder(f.placeholder)} className="px-3 py-1 bg-white border border-slate-200 rounded-md text-[10px] font-bold text-slate-400 hover:border-slate-800 transition-all">
-                                                {f.label}
-                                            </button>
-                                        ))}
-                                        {loopTags.map((f, i) => (
-                                            <button key={i} type="button" onClick={() => insertPlaceholder(f.placeholder)} className="px-3 py-1 bg-slate-800 text-white rounded-md text-[10px] font-bold hover:bg-black transition-all">
-                                                {f.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="pt-4 border-t border-slate-100">
-                                    <p className={cn(
-                                        "text-[10px] font-black uppercase tracking-widest mb-3 ml-1",
-                                        reportContext === 'workReport' ? "text-blue-600" : "text-emerald-600"
-                                    )}>
-                                        Step 2: {reportContext === 'workReport' ? 'Entries (Work Report)' : 'Tasks (Daily Sheet)'}
-                                    </p>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {(reportContext === 'workReport' ? workReportFields : dailyTaskFields).map((f, i) => (
-                                            <button key={i} type="button" onClick={() => insertPlaceholder(f.placeholder)} className={cn(
-                                                "px-3 py-1 bg-white border rounded-md text-[10px] font-bold transition-all",
-                                                reportContext === 'workReport' ? "text-blue-600 border-blue-100 hover:border-blue-600" : "text-emerald-600 border-emerald-100 hover:border-emerald-600"
-                                            )}>
-                                                {f.label} <span className="opacity-40 font-mono font-medium ml-1">{f.placeholder}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <textarea 
-                              {...templateForm.register("bodyHtml")}
-                              className="w-full min-h-[450px] p-6 font-mono text-xs bg-slate-50 text-slate-600 rounded-xl border border-slate-200 focus:ring-1 focus:ring-slate-800 shadow-inner resize-none"
-                              placeholder="<html>...</html>"
-                            />
-                        </div>
-                    </div>
+              <div className="p-6 space-y-6">
+                <div className="flex items-center justify-between gap-4 p-1 bg-slate-100 rounded-lg w-full">
+                  {hasWorkReportRight && (
+                    <button
+                      onClick={() => setReportContext('workReport')}
+                      className={cn(
+                        "flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-md transition-all",
+                        reportContext === 'workReport' ? "bg-blue-600 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"
+                      )}
+                    >
+                      Work Report Mode
+                    </button>
+                  )}
+                  {hasDailyTaskRight && (
+                    <button
+                      onClick={() => setReportContext('dailyTask')}
+                      className={cn(
+                        "flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-md transition-all",
+                        reportContext === 'dailyTask' ? "bg-emerald-600 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"
+                      )}
+                    >
+                      Daily Task Sheet Mode
+                    </button>
+                  )}
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 opacity-70">Internal Format Name</label>
+                    <input {...templateForm.register("templateName")} className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-slate-800 focus:ring-0 outline-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 opacity-70">Automatic Email Subject</label>
+                    <input {...templateForm.register("subjectFormat")} className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-slate-800 focus:ring-0 outline-none" />
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="p-4 border border-slate-100 bg-slate-50/50 rounded-xl space-y-4">
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1 text-slate-400">Step 1: Universal Headers & Logic</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {headerFields.map((f, i) => (
+                          <button key={i} type="button" onClick={() => insertPlaceholder(f.placeholder)} className="px-3 py-1 bg-white border border-slate-200 rounded-md text-[10px] font-bold text-slate-400 hover:border-slate-800 transition-all">
+                            {f.label}
+                          </button>
+                        ))}
+                        {loopTags.map((f, i) => (
+                          <button key={i} type="button" onClick={() => insertPlaceholder(f.placeholder)} className="px-3 py-1 bg-slate-800 text-white rounded-md text-[10px] font-bold hover:bg-black transition-all">
+                            {f.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100">
+                      <p className={cn(
+                        "text-[10px] font-black uppercase tracking-widest mb-3 ml-1",
+                        reportContext === 'workReport' ? "text-blue-600" : "text-emerald-600"
+                      )}>
+                        Step 2: {reportContext === 'workReport' ? 'Entries (Work Report)' : 'Tasks (Daily Sheet)'}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(reportContext === 'workReport' ? workReportFields : dailyTaskFields).map((f, i) => (
+                          <button key={i} type="button" onClick={() => insertPlaceholder(f.placeholder)} className={cn(
+                            "px-3 py-1 bg-white border rounded-md text-[10px] font-bold transition-all",
+                            reportContext === 'workReport' ? "text-blue-600 border-blue-100 hover:border-blue-600" : "text-emerald-600 border-emerald-100 hover:border-emerald-600"
+                          )}>
+                            {f.label} <span className="opacity-40 font-mono font-medium ml-1">{f.placeholder}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <textarea
+                    {...templateForm.register("bodyHtml")}
+                    className="w-full min-h-[450px] p-6 font-mono text-xs bg-slate-50 text-slate-600 rounded-xl border border-slate-200 focus:ring-1 focus:ring-slate-800 shadow-inner resize-none"
+                    placeholder="<html>...</html>"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-4 space-y-6">
+            <div className="bg-slate-800 rounded-xl p-6 text-white shadow-sm flex flex-col gap-6">
+              <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Context Guide</div>
+              <div className="space-y-4">
+                {reportContext === 'workReport' ? (
+                  <section className="animate-in slide-in-from-right-4 duration-300">
+                    <h4 className="text-[10px] font-bold text-blue-300 uppercase mb-2">Work Report Context</h4>
+                    <p className="text-[10px] text-slate-400 leading-relaxed italic">Focus on Client, Project, and Session Mode tags. This matches your high-level WorkLog entries.</p>
+                  </section>
+                ) : (
+                  <section className="animate-in slide-in-from-right-4 duration-300">
+                    <h4 className="text-[10px] font-bold text-emerald-300 uppercase mb-2">Daily Task Context</h4>
+                    <p className="text-[10px] text-slate-400 leading-relaxed italic">Focus on Project Name and individual Task Titles. This matches your detailed activity list.</p>
+                  </section>
+                )}
+                <div className="pt-4 border-t border-white/5 text-[10px] text-slate-500 leading-relaxed">
+                  Click a tag to insert it. Both modes use the same HTML body.
+                </div>
+              </div>
             </div>
 
-            <div className="lg:col-span-4 space-y-6">
-                <div className="bg-slate-800 rounded-xl p-6 text-white shadow-sm flex flex-col gap-6">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Context Guide</div>
-                    <div className="space-y-4">
-                        {reportContext === 'workReport' ? (
-                            <section className="animate-in slide-in-from-right-4 duration-300">
-                                <h4 className="text-[10px] font-bold text-blue-300 uppercase mb-2">Work Report Context</h4>
-                                <p className="text-[10px] text-slate-400 leading-relaxed italic">Focus on Client, Project, and Session Mode tags. This matches your high-level WorkLog entries.</p>
-                            </section>
-                        ) : (
-                            <section className="animate-in slide-in-from-right-4 duration-300">
-                                <h4 className="text-[10px] font-bold text-emerald-300 uppercase mb-2">Daily Task Context</h4>
-                                <p className="text-[10px] text-slate-400 leading-relaxed italic">Focus on Project Name and individual Task Titles. This matches your detailed activity list.</p>
-                            </section>
-                        )}
-                        <div className="pt-4 border-t border-white/5 text-[10px] text-slate-500 leading-relaxed">
-                            Click a tag to insert it. Both modes use the same HTML body.
-                        </div>
-                    </div>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[400px]">
+              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
+                <h3 className="font-bold text-slate-800 text-[10px] uppercase tracking-widest">Live Output</h3>
+              </div>
+              <div className="p-4 flex-1 bg-slate-100/30 overflow-auto">
+                <div className="bg-white shadow-sm rounded-lg mx-auto w-full border border-slate-100 overflow-hidden">
+                  <div className="p-3 border-b border-slate-50 text-[9px] font-bold bg-slate-50/50 text-slate-400">
+                    {reportContext === 'workReport' ? 'Preview: Work Report' : 'Preview: Daily Task Sheet'}
+                  </div>
+                  <div className="p-6">
+                    <div className="transform scale-[0.8] origin-top" dangerouslySetInnerHTML={{
+                      __html: templateForm.watch("bodyHtml")
+                        ?.replace(/{{Date}}/g, "30-Mar-2026")
+                        ?.replace(/{{ClientName}}/g, "Client Name")
+                        ?.replace(/{{ProjectName}}/g, "Project Name")
+                        ?.replace(/{{Time}}/g, "2.5")
+                        ?.replace(/{{StatusName}}/g, "Running")
+                        ?.replace(/{{Description}}/g, "• Task detail here...")
+                        ?.replace(/{{DescriptionStatus}}/g, "• Task detail here... - Running")
+                        ?.replace(/{{TasksTable}}/g, "Table Preview...") || ""
+                    }} />
+                  </div>
                 </div>
-
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[400px]">
-                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-                        <h3 className="font-bold text-slate-800 text-[10px] uppercase tracking-widest">Live Output</h3>
-                    </div>
-                    <div className="p-4 flex-1 bg-slate-100/30 overflow-auto">
-                        <div className="bg-white shadow-sm rounded-lg mx-auto w-full border border-slate-100 overflow-hidden">
-                             <div className="p-3 border-b border-slate-50 text-[9px] font-bold bg-slate-50/50 text-slate-400">
-                                {reportContext === 'workReport' ? 'Preview: Work Report' : 'Preview: Daily Task Sheet'}
-                             </div>
-                             <div className="p-6">
-                                <div className="transform scale-[0.8] origin-top" dangerouslySetInnerHTML={{ 
-                                    __html: templateForm.watch("bodyHtml")
-                                        ?.replace(/{{Date}}/g, "30-Mar-2026")
-                                        ?.replace(/{{ClientName}}/g, "Google")
-                                        ?.replace(/{{ProjectName}}/g, "Antigravity AI")
-                                        ?.replace(/{{Time}}/g, "2.5")
-                                        ?.replace(/{{StatusName}}/g, "Running")
-                                        ?.replace(/{{Description}}/g, "• Task detail here...")
-                                        ?.replace(/{{DescriptionStatus}}/g, "• Task detail here... - Running")
-                                        ?.replace(/{{TasksTable}}/g, "Table Preview...") || "" 
-                                }} />
-                             </div>
-                        </div>
-                    </div>
-                </div>
+              </div>
             </div>
+          </div>
         </div>
       )}
 
       <Modal isOpen={isRecipientModalOpen} onClose={() => setIsRecipientModalOpen(false)} title="Add Email Target" size="md">
         <form onSubmit={recipientForm.handleSubmit((data) => recipientMutation.mutate(data))} className="space-y-4">
-           <Input {...recipientForm.register("email")} label="Recipient Address" icon={<Mail className="w-4 h-4" />} error={recipientForm.formState.errors.email?.message} />
-           <Input {...recipientForm.register("name")} label="Alias" icon={<UserIcon className="w-4 h-4" />} error={recipientForm.formState.errors.name?.message} />
-           <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 leading-8 italic">DELIVERY PRIORITY</label>
-              <select {...recipientForm.register("recipientType")} className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-bold transition-all text-gray-600">
-                  <option value="To">Normal (To)</option>
-                  <option value="CC">Carbon Copy (CC)</option>
-                  <option value="BCC">Blind Copy (BCC)</option>
-              </select>
-           </div>
-           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-              <div className="flex items-center gap-3">
-                  <Shield className={cn("w-4 h-4", recipientForm.watch("activeStatus") ? "text-emerald-500" : "text-gray-300")} />
-                  <span className="text-xs font-bold text-gray-600">Active Status</span>
-              </div>
-              <Switch 
-                  checked={recipientForm.watch("activeStatus")} 
-                  onChange={(checked: boolean) => recipientForm.setValue("activeStatus", checked)} 
-              />
-           </div>
-           <div className="pt-6 flex justify-end gap-3">
-              <Button variant="outline" type="button" onClick={() => setIsRecipientModalOpen(false)}>Cancel</Button>
-              <Button type="submit" isLoading={recipientMutation.isPending} className="px-8 flex-1">Onboard</Button>
-           </div>
+          <Input {...recipientForm.register("email")} label="Recipient Address" icon={<Mail className="w-4 h-4" />} error={recipientForm.formState.errors.email?.message} />
+          <Input {...recipientForm.register("name")} label="Alias" icon={<UserIcon className="w-4 h-4" />} error={recipientForm.formState.errors.name?.message} />
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 leading-8 italic">DELIVERY PRIORITY</label>
+            <select {...recipientForm.register("recipientType")} className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-bold transition-all text-gray-600">
+              <option value="To">Normal (To)</option>
+              <option value="CC">Carbon Copy (CC)</option>
+              <option value="BCC">Blind Copy (BCC)</option>
+            </select>
+          </div>
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+            <div className="flex items-center gap-3">
+              <Shield className={cn("w-4 h-4", recipientForm.watch("activeStatus") ? "text-emerald-500" : "text-gray-300")} />
+              <span className="text-xs font-bold text-gray-600">Active Status</span>
+            </div>
+            <Switch
+              checked={recipientForm.watch("activeStatus")}
+              onChange={(checked: boolean) => recipientForm.setValue("activeStatus", checked)}
+            />
+          </div>
+          <div className="pt-6 flex justify-end gap-3">
+            <Button variant="outline" type="button" onClick={() => setIsRecipientModalOpen(false)}>Cancel</Button>
+            <Button type="submit" isLoading={recipientMutation.isPending} className="px-8 flex-1">Onboard</Button>
+          </div>
         </form>
       </Modal>
     </div>
