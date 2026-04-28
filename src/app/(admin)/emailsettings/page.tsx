@@ -629,7 +629,7 @@ export default function EmailSettingsPage() {
                   <div className="p-6">
                     <div className="transform scale-[0.8] origin-top" dangerouslySetInnerHTML={{
                       __html: templateForm.watch("bodyHtml")
-                        ?.replace(/{{Date}}/g, "30-Mar-2026")
+                        ?.replace(/{{Date}}/g, "30/03/2026")
                         ?.replace(/{{ClientName}}/g, "Client Name")
                         ?.replace(/{{ProjectName}}/g, "Project Name")
                         ?.replace(/{{Time}}/g, "2.5")

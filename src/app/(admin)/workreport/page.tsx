@@ -369,7 +369,7 @@ export default function WorkReportPage() {
                      {groupedHistory.length === 0 ? <div className="text-center py-20 text-slate-300 text-sm italic uppercase tracking-[0.3em]">NO RECORDS FOUND</div> : groupedHistory.map((h: any) => (
                         <div key={h.workLogId} className="p-5 border border-slate-200 rounded-lg hover:border-blue-300 transition-all space-y-4 shadow-sm hover:shadow-md">
                            <div className="flex items-center justify-between">
-                              <div className="font-bold text-slate-700 text-sm flex items-center gap-3"><Calendar className="w-4 h-4 text-blue-500" /> {new Date(h.workDate).toLocaleDateString()}</div>
+                              <div className="font-bold text-slate-700 text-sm flex items-center gap-3"><Calendar className="w-4 h-4 text-blue-500" /> {new Date(h.workDate).toLocaleDateString('en-GB')}</div>
                               <div className="flex gap-2">
                                  {canEdit && (
                                    <button onClick={() => loadSessionForEdit(h.workDate.split('T')[0])} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all"><Edit2 className="w-4 h-4" /></button>
