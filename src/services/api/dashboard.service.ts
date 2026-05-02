@@ -7,6 +7,19 @@ export interface DashboardStats {
   totalClients: number;
   reportsPending: number;
   recentActivities: RecentActivity[];
+  monthlyOverview: MonthlyOverview[];
+  statusWiseCounts: StatusCount[];
+}
+
+export interface MonthlyOverview {
+  month: string;
+  statusCounts: StatusCount[];
+}
+
+export interface StatusCount {
+  statusName: string;
+  statusColor: string;
+  count: number;
 }
 
 export interface RecentActivity {

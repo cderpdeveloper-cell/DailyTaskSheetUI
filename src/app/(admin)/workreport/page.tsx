@@ -18,11 +18,40 @@ import { usePagePermissions } from "@/hooks/usePagePermissions";
 
 // --- Clean Search Select Component ---
 
-const SimpleSearchSelect = ({ label, options, value, onChange, placeholder }: any) => {
+const SimpleSearchSelect = ({ label, options, value, onChange, placeholder, sortMode = "default", disabledOptions = [] }: any) => {
    const [isOpen, setIsOpen] = useState(false);
    const [search, setSearch] = useState("");
    const containerRef = useRef<HTMLDivElement>(null);
    const selectedOption = options.find((o: any) => o.id === value);
+
+   // Context-aware sorting logic
+   const sortedOptions = useMemo(() => {
+      let filtered = options.filter((o: any) => o.name.toLowerCase().includes(search.toLowerCase()));
+
+      const recentIdsJson = localStorage.getItem("recent_clients_workreport");
+      const recentIds: number[] = recentIdsJson ? JSON.parse(recentIdsJson) : [];
+
+      if (sortMode === "recentLast" && recentIds.length > 0) {
+         return [...filtered].sort((a, b) => {
+            const aRecent = recentIds.indexOf(a.id);
+            const bRecent = recentIds.indexOf(b.id);
+            if (aRecent !== -1 && bRecent === -1) return 1;
+            if (aRecent === -1 && bRecent !== -1) return -1;
+            if (aRecent !== -1 && bRecent !== -1) return bRecent - aRecent;
+            return 0;
+         });
+      } else if (sortMode === "recentFirst" && recentIds.length > 0) {
+         return [...filtered].sort((a, b) => {
+            const aRecent = recentIds.indexOf(a.id);
+            const bRecent = recentIds.indexOf(b.id);
+            if (aRecent !== -1 && bRecent === -1) return -1;
+            if (aRecent === -1 && bRecent !== -1) return 1;
+            if (aRecent !== -1 && bRecent !== -1) return bRecent - aRecent;
+            return 0;
+         });
+      }
+      return filtered;
+   }, [options, search, sortMode]);
 
    useEffect(() => {
       const click = (e: MouseEvent) => { if (containerRef.current && !containerRef.current.contains(e.target as Node)) setIsOpen(false); };
@@ -48,14 +77,24 @@ const SimpleSearchSelect = ({ label, options, value, onChange, placeholder }: an
                      <input autoFocus placeholder="Search..." className="w-full h-8 px-3 text-xs bg-white rounded border border-slate-200 focus:outline-none" value={search} onChange={(e) => setSearch(e.target.value)} />
                   </div>
                   <div className="max-h-60 overflow-y-auto">
-                     {options.filter((o: any) => o.name.toLowerCase().includes(search.toLowerCase())).map((opt: any) => (
-                        <button
-                           key={opt.id} type="button" onClick={() => { onChange(opt.id); setIsOpen(false); setSearch(""); }}
-                           className={`w-full text-left px-4 py-2.5 text-xs transition-all ${value === opt.id ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
-                        >
-                           {opt.name}
-                        </button>
-                     ))}
+                     {sortedOptions.map((opt: any) => {
+                        const isDisabled = disabledOptions.includes(opt.id) && opt.id !== value;
+                        return (
+                           <button
+                              key={opt.id} type="button"
+                              disabled={isDisabled}
+                              onClick={() => { if (!isDisabled) { onChange(opt.id); setIsOpen(false); setSearch(""); } }}
+                              className={`w-full text-left px-4 py-2.5 text-xs transition-all ${value === opt.id ? 'bg-blue-50 text-blue-700 font-bold' : isDisabled ? 'opacity-30 cursor-not-allowed bg-slate-50' : 'text-slate-600 hover:bg-slate-50'}`}
+                           >
+                              <div className="flex items-center justify-between">
+                                 <span className={isDisabled ? 'line-through' : ''}>{opt.name}</span>
+                                 {isDisabled && (
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase italic">Selected</span>
+                                 )}
+                              </div>
+                           </button>
+                        );
+                     })}
                   </div>
                </div>
             )}
@@ -89,10 +128,42 @@ export default function WorkReportPage() {
    const { data: statuses = [] } = useQuery({ queryKey: ["statusesList", companyId], queryFn: () => statusService.list(companyId), select: (res) => res.data || [] });
    const { data: history = [] } = useQuery({ queryKey: ["workLogs", employeeId], queryFn: () => workLogService.getLogs(employeeId), select: (res) => res.data.data || [] });
 
+   const activePreviewReport = useMemo(() => {
+      if (!activePreviewId) return null;
+      return history.find((h: any) => h.workLogId === activePreviewId);
+   }, [activePreviewId, history]);
+
    const clientOptions = useMemo(() => clientsRaw.map((c: any) => ({ id: c.clientId, name: c.clientName })), [clientsRaw]);
    const projectOptions = useMemo(() => projectsRaw.map((p: any) => ({ id: p.projectId, name: p.projectName })), [projectsRaw]);
    const statusOptions = useMemo(() => statuses.map((s: any) => ({ id: s.statusId, name: s.statusName })), [statuses]);
    const defaultStatusId = useMemo(() => statusOptions[0]?.id || 0, [statusOptions]);
+
+   const isCurrentDateSent = useMemo(() => {
+      return history.some((h: any) => h.workDate.split('T')[0] === selectedDate && h.isEmailSent);
+   }, [history, selectedDate]);
+
+
+   useEffect(() => {
+      if (projectOptions.length > 0 && logs.some(l => l.projectId === 0)) {
+         const roleName = user?.roleName?.toLowerCase() || "";
+         let defaultProjectId = 0;
+
+         if (roleName.includes("support")) {
+            const supportProj = projectOptions.find(p => p.name.toLowerCase().includes("support") || p.name.toLowerCase().includes("maintenance"));
+            if (supportProj) defaultProjectId = supportProj.id;
+         } else if (roleName.includes("developer")) {
+            const devProj = projectOptions.find(p => p.name.toLowerCase().includes("internal development") || p.name.toLowerCase().includes("product"));
+            if (devProj) defaultProjectId = devProj.id;
+         } else if (roleName.includes("marketing") || roleName.includes("sales")) {
+            const salesProj = projectOptions.find(p => p.name.toLowerCase().includes("marketing") || p.name.toLowerCase().includes("sales"));
+            if (salesProj) defaultProjectId = salesProj.id;
+         }
+
+         if (defaultProjectId > 0) {
+            setLogs(prev => prev.map(l => l.projectId === 0 ? { ...l, projectId: defaultProjectId } : l));
+         }
+      }
+   }, [projectOptions, user?.roleName]);
 
    // Update initial logs with default status when statuses become available
    useEffect(() => {
@@ -118,8 +189,33 @@ export default function WorkReportPage() {
    // --- Handlers ---
    const addClientSession = () => {
       const newIdx = logs.length;
-      setLogs([...logs, { clientId: 0, projectId: 0, workDate: selectedDate, inputTime: 0, mode: "AnyDesk", statusId: defaultStatusId, otherEmployeeIds: "", tasks: [{ description: "", statusId: defaultStatusId, isCompleted: false }] }]);
-      setExpandedIndex(newIdx);
+
+      // ⚡ ROLE-BASED DEFAULT SELECTION
+      let defaultProjectId = 0;
+      const roleName = user?.roleName?.toLowerCase() || "";
+
+      if (roleName.includes("support")) {
+         const supportProj = projectOptions.find(p => p.name.toLowerCase().includes("support") || p.name.toLowerCase().includes("maintenance"));
+         if (supportProj) defaultProjectId = supportProj.id;
+      } else if (roleName.includes("developer")) {
+         const devProj = projectOptions.find(p => p.name.toLowerCase().includes("internal development") || p.name.toLowerCase().includes("product"));
+         if (devProj) defaultProjectId = devProj.id;
+      } else if (roleName.includes("marketing") || roleName.includes("sales")) {
+         const salesProj = projectOptions.find(p => p.name.toLowerCase().includes("marketing") || p.name.toLowerCase().includes("sales"));
+         if (salesProj) defaultProjectId = salesProj.id;
+      }
+
+      setLogs([{ clientId: 0, projectId: defaultProjectId, workDate: selectedDate, inputTime: 0, mode: "AnyDesk", statusId: defaultStatusId, otherEmployeeIds: "", tasks: [{ description: "", statusId: defaultStatusId, isCompleted: false }] }, ...logs]);
+      setExpandedIndex(0);
+   };
+
+   // Track recent clients
+   const trackRecentClient = (clientId: number) => {
+      if (!clientId) return;
+      const recentIdsJson = localStorage.getItem("recent_clients_workreport");
+      let recentIds: number[] = recentIdsJson ? JSON.parse(recentIdsJson) : [];
+      recentIds = [clientId, ...recentIds.filter(id => id !== clientId)].slice(0, 5);
+      localStorage.setItem("recent_clients_workreport", JSON.stringify(recentIds));
    };
    const removeClientSession = (idx: number) => {
       if (logs.length > 1) {
@@ -127,8 +223,18 @@ export default function WorkReportPage() {
          if (expandedIndex === idx) setExpandedIndex(Math.max(0, idx - 1));
       }
    };
-   const updateClientDetail = (idx: number, field: string, value: any) => { const next = [...logs]; (next[idx] as any)[field] = value; setLogs(next); };
-   const addSubActivity = (logIdx: number) => { const next = [...logs]; next[logIdx].tasks.push({ description: "", statusId: defaultStatusId, isCompleted: false }); setLogs(next); };
+   const updateClientDetail = (idx: number, field: string, value: any) => {
+      const next = [...logs];
+      (next[idx] as any)[field] = value;
+      setLogs(next);
+
+      if (field === 'clientId') trackRecentClient(value);
+   };
+   const addSubActivity = (logIdx: number) => { 
+      const next = [...logs]; 
+      next[logIdx].tasks = [{ description: "", statusId: defaultStatusId, isCompleted: false }, ...next[logIdx].tasks]; 
+      setLogs(next); 
+   };
    const removeSubActivity = (logIdx: number, taskIdx: number) => { if (logs[logIdx].tasks.length > 1) { const next = [...logs]; next[logIdx].tasks = next[logIdx].tasks.filter((_, i) => i !== taskIdx); setLogs(next); } };
    const updateActivityParam = (logIdx: number, taskIdx: number, field: string, value: any) => { const next = [...logs]; (next[logIdx].tasks[taskIdx] as any)[field] = value; setLogs(next); };
 
@@ -136,21 +242,14 @@ export default function WorkReportPage() {
       mutationFn: (data: WorkReportSessionDTO) => workLogService.saveSession(data),
       onSuccess: (res) => {
          if (res.data.success) {
-            addToast("Audit Session Saved!", "success");
+            addToast("All Work Logs Synchronized Successfully!", "success");
             queryClient.invalidateQueries({ queryKey: ["workLogs", employeeId] });
 
-            // Reset logs to a single empty entry with the default status ID
-            setLogs([{
-               clientId: 0,
-               projectId: 0,
-               workDate: selectedDate,
-               inputTime: 0,
-               mode: "AnyDesk",
-               statusId: defaultStatusId,
-               otherEmployeeIds: "",
-               tasks: [{ description: "", statusId: defaultStatusId, isCompleted: false }]
-            }]);
-            setExpandedIndex(0);
+            // 🌟 SMOOTH POST-SAVE EXPERIENCE
+            // Keep the data in the form so it stays in "Edit Mode"
+            setTimeout(() => {
+               setExpandedIndex(0);
+            }, 500);
          }
       }
    });
@@ -162,7 +261,12 @@ export default function WorkReportPage() {
 
    const sendEmailMutation = useMutation({
       mutationFn: (id: number) => workLogService.sendEmail(id),
-      onSuccess: (res) => { if (res.data.success) { addToast("Email Report Dispatched!", "success"); } },
+      onSuccess: (res) => {
+         if (res.data.success) {
+            addToast("Email Report Dispatched!", "success");
+            queryClient.invalidateQueries({ queryKey: ["workLogs", employeeId] });
+         }
+      },
       onError: (err: any) => { addToast(err.response?.data?.message || "Failed to send email", "error"); }
    });
 
@@ -237,9 +341,9 @@ export default function WorkReportPage() {
                   <button onClick={() => setIsHistoryOpen(true)} className="h-10 px-4 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs flex items-center gap-2 hover:bg-slate-50 transition-all">
                      <History className="w-4 h-4" /> View Archive
                   </button>
-                  <button onClick={handleSaveSession} disabled={sessionMutation.isPending} className="h-10 px-6 bg-blue-600 text-white rounded-lg font-bold text-xs flex items-center gap-2 hover:bg-blue-700 shadow-sm transition-all group">
-                     {sessionMutation.isPending ? <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
-                     Save Changes <span className="opacity-40 ml-1 text-[9px]">[CTRL+S]</span>
+                  <button onClick={handleSaveSession} disabled={sessionMutation.isPending || isCurrentDateSent} className={`h-10 px-6 rounded-lg font-bold text-xs flex items-center gap-2 transition-all ${isCurrentDateSent ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'}`}>
+                     {sessionMutation.isPending ? <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : isCurrentDateSent ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                     {isCurrentDateSent ? 'Report Dispatched' : 'Save Changes'} {!isCurrentDateSent && <span className="opacity-40 ml-1 text-[9px]">[CTRL+S]</span>}
                   </button>
                </div>
             </div>
@@ -251,10 +355,10 @@ export default function WorkReportPage() {
                <div>
                   <h2 className="text-xl font-bold text-slate-800">Daily Task Sheet</h2>
                </div>
-               {canCreate && (
-                 <button onClick={addClientSession} className="h-10 px-5 bg-slate-800 text-white rounded-lg font-bold text-xs flex items-center gap-3 hover:bg-slate-900 transition-all active:scale-95">
-                   <Plus className="w-4 h-4" /> Add Entry <span className="opacity-40 text-[9px] font-mono">[ALT+N]</span>
-                 </button>
+               {canCreate && !isCurrentDateSent && (
+                  <button onClick={addClientSession} className="h-10 px-5 bg-slate-800 text-white rounded-lg font-bold text-xs flex items-center gap-3 hover:bg-slate-900 transition-all active:scale-95">
+                     <Plus className="w-4 h-4" /> Add Entry <span className="opacity-40 text-[9px] font-mono">[ALT+N]</span>
+                  </button>
                )}
             </div>
 
@@ -297,67 +401,125 @@ export default function WorkReportPage() {
 
                         {/* FULL EDIT VIEW (VISIBLE WHEN EXPANDED) */}
                         {isExpanded && (
-                           <div className="flex flex-col md:flex-row animate-in fade-in slide-in-from-top-2 duration-300">
-                              {/* DETAIL TIER (LEFT) - NOW INCLUDES TEAM ID */}
-                              <div className="flex-1 p-6 space-y-6 border-b md:border-b-0 md:border-r border-slate-200">
-                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <SimpleSearchSelect label="Client Profile" options={clientOptions} value={log.clientId} onChange={(v: number) => updateClientDetail(logIdx, 'clientId', v)} placeholder="Select Client" />
-                                    <SimpleSearchSelect label="Project Scope" options={projectOptions} value={log.projectId} onChange={(v: number) => updateClientDetail(logIdx, 'projectId', v)} placeholder="Select Project" />
+                           <div className="flex flex-col lg:flex-row bg-white border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
+
+                              {/* 📝 FORM SECTION (LEFT) */}
+                              <div className="flex-[1.2] p-5 space-y-4 border-r border-slate-200">
+
+                                 {/* Shrink Client/Project into a single row */}
+                                 <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                       <label className="text-[11px] font-bold text-slate-500 ml-1 uppercase tracking-tight">Client Profile</label>
+                                       <SimpleSearchSelect 
+                                          options={clientOptions} 
+                                          value={log.clientId} 
+                                          onChange={(v: number) => updateClientDetail(logIdx, 'clientId', v)} 
+                                          placeholder="Select Client" 
+                                          sortMode="recentLast" 
+                                          disabledOptions={logs.map(l => l.clientId)} 
+                                       />
+                                    </div>
+                                    <div className="space-y-1">
+                                       <label className="text-[11px] font-bold text-slate-500 ml-1 uppercase tracking-tight">Project Scope</label>
+                                       <SimpleSearchSelect 
+                                          options={projectOptions} 
+                                          value={log.projectId} 
+                                          onChange={(v: number) => updateClientDetail(logIdx, 'projectId', v)} 
+                                          placeholder="Select Project" 
+                                       />
+                                    </div>
                                  </div>
 
-                                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                                    <div className="space-y-1.5 p-2 bg-slate-50/50 border border-slate-100 rounded-lg">
-                                       <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 tracking-wide">Main Status</label>
-                                       <select value={log.statusId} onChange={(e) => updateClientDetail(logIdx, 'statusId', parseInt(e.target.value))} className="w-full bg-transparent border-none text-sm font-bold text-slate-700 focus:ring-0 outline-none cursor-pointer">
-                                          {statusOptions.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                                       </select>
+                                 {/* Twin Card Rows */}
+                                 <div className="grid grid-cols-2 gap-3">
+                                    {/* Main Status Card */}
+                                    <div className="p-3 bg-slate-50/50 border border-slate-200 rounded-xl space-y-1.5">
+                                       <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Main Status</label>
+                                       <div className="bg-white border border-slate-200 rounded-lg px-2 py-1.5">
+                                          <select
+                                             value={log.statusId}
+                                             onChange={(e) => updateClientDetail(logIdx, 'statusId', parseInt(e.target.value))}
+                                             className="w-full bg-transparent border-none text-sm font-bold text-slate-700 focus:ring-0 outline-none cursor-pointer"
+                                          >
+                                             {statusOptions.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                                          </select>
+                                       </div>
                                     </div>
-                                    <div className="space-y-1.5 p-2 bg-slate-50/50 border border-slate-100 rounded-lg">
-                                       <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 tracking-wide">Session Mode</label>
-                                       <input value={log.mode} onChange={(e) => updateClientDetail(logIdx, 'mode', e.target.value)} placeholder="AnyDesk..." className="w-full bg-transparent border-none px-1 text-sm font-bold text-slate-700 focus:ring-0 outline-none" />
+
+                                    {/* Session Mode Card */}
+                                    <div className="p-3 bg-slate-50/50 border border-slate-200 rounded-xl space-y-1.5">
+                                       <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Session Mode</label>
+                                       <div className="bg-white border border-slate-200 rounded-lg px-2 py-1.5">
+                                          <input
+                                             value={log.mode}
+                                             onChange={(e) => updateClientDetail(logIdx, 'mode', e.target.value)}
+                                             placeholder="AnyDesk"
+                                             className="w-full bg-transparent border-none text-sm font-bold text-slate-700 focus:ring-0 outline-none"
+                                          />
+                                       </div>
                                     </div>
-                                    <div className="space-y-1.5 p-2 bg-slate-50/50 border border-slate-100 rounded-lg">
-                                       <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 tracking-wide">Total Time</label>
-                                       <input type="number" step="0.01" value={log.inputTime} onChange={(e) => updateClientDetail(logIdx, 'inputTime', e.target.value)} placeholder="0.00" className="w-full bg-transparent border-none px-1 text-sm font-bold text-slate-700 focus:ring-0 outline-none" />
+
+                                    {/* Total Time Card */}
+                                    <div className="p-3 bg-slate-50/50 border border-slate-200 rounded-xl space-y-1.5">
+                                       <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Total Time</label>
+                                       <div className="bg-white border border-slate-200 rounded-lg px-2 py-1.5">
+                                          <input
+                                             type="number"
+                                             step="0.01"
+                                             value={log.inputTime}
+                                             onChange={(e) => updateClientDetail(logIdx, 'inputTime', e.target.value)}
+                                             placeholder="0"
+                                             className="w-full bg-transparent border-none text-sm font-bold text-slate-700 focus:ring-0 outline-none"
+                                          />
+                                       </div>
                                     </div>
-                                    {/* 📍 TEAM ID MOVED TO MAIN TABLE AS REQUESTED */}
-                                    <div className="space-y-1.5 p-2 bg-slate-50/50 border border-slate-100 rounded-lg">
-                                       <label className="text-[10px] font-bold text-blue-600 uppercase ml-1 tracking-wide flex items-center gap-1.5"><Users className="w-3 h-3" /> Team</label>
-                                       <input value={log.otherEmployeeIds} onChange={(e) => updateClientDetail(logIdx, 'otherEmployeeIds', e.target.value)} placeholder="EMP-101, ..." className="w-full bg-transparent border-none px-1 text-sm font-bold text-slate-700 focus:ring-0 outline-none italic placeholder:font-normal" />
+
+                                    {/* Team Card */}
+                                    <div className="p-3 bg-slate-50/50 border border-slate-200 rounded-xl space-y-1.5">
+                                       <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Team</label>
+                                       <div className="bg-white border border-slate-200 rounded-lg px-2 py-1.5">
+                                          <input
+                                             value={log.otherEmployeeIds}
+                                             onChange={(e) => updateClientDetail(logIdx, 'otherEmployeeIds', e.target.value)}
+                                             placeholder="Employee Name"
+                                             className="w-full bg-transparent border-none text-sm font-bold text-slate-700 focus:ring-0 outline-none"
+                                          />
+                                       </div>
                                     </div>
                                  </div>
                               </div>
 
-                              {/* SUB-DETAIL TIER (RIGHT) - NO TEAM ID HERE */}
-                              <div className="w-full md:w-[450px] bg-slate-50/10 p-6 flex flex-col">
+                              {/* ⚡ ACTIVITIES SECTION (RIGHT) */}
+                              <div className="flex-1 p-5 bg-white flex flex-col">
                                  <div className="flex items-center justify-between mb-4">
-                                    <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2"><Activity className="w-3 h-3" /> Activities</h4>
-                                    <button onClick={() => addSubActivity(logIdx)} className="text-[11px] font-bold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg flex items-center gap-2 transition-all active:scale-95">
+                                    <h4 className="text-lg font-bold text-slate-800">Activities</h4>
+                                    <button onClick={() => addSubActivity(logIdx)} className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1">
                                        <Plus className="w-3.5 h-3.5" /> Append <span className="opacity-40 text-[9px] font-mono">[ALT+A]</span>
                                     </button>
                                  </div>
 
-                                 <div className="space-y-3 flex-1 overflow-y-auto max-h-[350px] pr-2 custom-scrollbar">
+                                 <div className="space-y-4 flex-1 overflow-y-auto max-h-[450px] pr-2 custom-scrollbar">
                                     {log.tasks.map((task, tIdx) => (
-                                       <div key={tIdx} className="bg-white border border-slate-100 p-4 rounded-xl shadow-sm space-y-3 relative group transition-all hover:bg-white/80">
-                                          <button onClick={() => removeSubActivity(logIdx, tIdx)} className={`absolute top-2 right-2 p-1 text-slate-300 hover:text-red-500 transition-all ${log.tasks.length === 1 ? 'hidden' : ''}`}><X className="w-4 h-4" /></button>
-                                          <div className="bg-white border border-slate-200 rounded-lg focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-50 transition-all flex flex-col h-32 overflow-hidden">
-                                             <div className="px-4 pt-3 pb-1 border-b border-slate-50">
-                                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block">Activity Narrative</label>
-                                             </div>
+                                       <div key={tIdx} className="space-y-3 relative group">
+                                          <button onClick={() => removeSubActivity(logIdx, tIdx)} className={`absolute -top-1.5 -right-1.5 p-1 bg-white border border-slate-200 rounded-full text-slate-300 hover:text-red-500 shadow-sm transition-all z-10 ${log.tasks.length === 1 ? 'hidden' : ''}`}><X className="w-3 h-3" /></button>
+
+                                          <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-blue-50 focus-within:border-blue-400 transition-all">
                                              <textarea
-                                                value={task.description} onChange={(e) => updateActivityParam(logIdx, tIdx, 'description', e.target.value)}
+                                                value={task.description} 
+                                                onChange={(e) => updateActivityParam(logIdx, tIdx, 'description', e.target.value)}
                                                 placeholder="Elaborate on work performed..."
-                                                className="w-full bg-transparent border-none px-4 py-2 text-sm font-bold text-slate-700 focus:ring-0 outline-none flex-1 resize-none placeholder:font-normal placeholder:text-slate-200 leading-relaxed"
+                                                className="w-full h-60 p-3 bg-white border-none text-sm text-slate-700 focus:ring-0 outline-none resize-none placeholder:text-slate-300 leading-relaxed"
                                              />
                                           </div>
-                                          <div className="flex justify-between items-center pt-2">
-                                             <div className="flex items-center gap-2">
-                                                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                                                <span className="text-[10px] font-bold text-slate-300 uppercase">Audit Point {tIdx + 1}</span>
-                                             </div>
-                                             <div className="px-3 py-1 bg-slate-50 border border-slate-200 rounded text-[10px] font-black text-slate-500 uppercase">
-                                                <select value={task.statusId} onChange={(e) => updateActivityParam(logIdx, tIdx, 'statusId', parseInt(e.target.value))} className="bg-transparent border-none focus:ring-0 outline-none cursor-pointer">
+
+                                          <div className="flex items-center gap-3">
+                                             <span className="text-[11px] font-bold text-slate-400 whitespace-nowrap uppercase tracking-tighter">Audit Point {tIdx + 1}</span>
+                                             <div className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1 flex items-center">
+                                                <select
+                                                   value={task.statusId}
+                                                   onChange={(e) => updateActivityParam(logIdx, tIdx, 'statusId', parseInt(e.target.value))}
+                                                   className="w-full bg-transparent border-none text-sm font-bold text-slate-700 focus:ring-0 outline-none cursor-pointer"
+                                                >
                                                    {statusOptions.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
                                                 </select>
                                              </div>
@@ -375,72 +537,92 @@ export default function WorkReportPage() {
          </div>
 
          {/* 🚀 HISTORY DRAWER - SIMPLE */}
-         {isHistoryOpen && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-end">
-               <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-none" onClick={() => setIsHistoryOpen(false)} />
-               <div className="relative w-full max-w-md h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-                  <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                     <h2 className="font-bold text-slate-800 underline decoration-blue-500 underline-offset-4">Audit Archive</h2>
-                     <button onClick={() => setIsHistoryOpen(false)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-lg"><X className="w-5 h-5" /></button>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                     {groupedHistory.length === 0 ? <div className="text-center py-20 text-slate-300 text-sm italic uppercase tracking-[0.3em]">NO RECORDS FOUND</div> : groupedHistory.map((h: any) => (
-                        <div key={h.workLogId} className="p-5 border border-slate-200 rounded-lg hover:border-blue-300 transition-all space-y-4 shadow-sm hover:shadow-md">
-                           <div className="flex items-center justify-between">
-                              <div className="font-bold text-slate-700 text-sm flex items-center gap-3"><Calendar className="w-4 h-4 text-blue-500" /> {new Date(h.workDate).toLocaleDateString('en-GB')}</div>
-                              <div className="flex gap-2">
-                                 {canEdit && (
-                                   <button onClick={() => loadSessionForEdit(h.workDate.split('T')[0])} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all"><Edit2 className="w-4 h-4" /></button>
-                                 )}
-                                 {canDelete && (
-                                   <button 
+         {
+            isHistoryOpen && (
+               <div className="fixed inset-0 z-[100] flex items-center justify-end">
+                  <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-none" onClick={() => setIsHistoryOpen(false)} />
+                  <div className="relative w-full max-w-md h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                     <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                        <h2 className="font-bold text-slate-800 underline decoration-blue-500 underline-offset-4">Audit Archive</h2>
+                        <button onClick={() => setIsHistoryOpen(false)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-lg"><X className="w-5 h-5" /></button>
+                     </div>
+                     <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                        {groupedHistory.length === 0 ? <div className="text-center py-20 text-slate-300 text-sm italic uppercase tracking-[0.3em]">NO RECORDS FOUND</div> : groupedHistory.map((h: any) => (
+                           <div key={h.workLogId} className="p-5 border border-slate-200 rounded-lg hover:border-blue-300 transition-all space-y-4 shadow-sm hover:shadow-md relative overflow-hidden">
+                              {/* 📧 EMAIL STATUS INDICATOR */}
+                              {h.isEmailSent && (
+                                 <div className="absolute top-0 right-0">
+                                    <div className="bg-emerald-50 text-emerald-600 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter rounded-bl-lg border-l border-b border-emerald-100 flex items-center gap-1">
+                                       <CheckCircle className="w-2.5 h-2.5" /> Mail Dispatched
+                                    </div>
+                                 </div>
+                              )}
+
+                              <div className="flex items-center justify-between">
+                                 <div className="font-bold text-slate-700 text-sm flex items-center gap-3"><Calendar className="w-4 h-4 text-blue-500" /> {new Date(h.workDate).toLocaleDateString('en-GB')}</div>
+                                 <div className="flex gap-2">
+                                    {canEdit && !h.isEmailSent && (
+                                       <button onClick={() => loadSessionForEdit(h.workDate.split('T')[0])} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all"><Edit2 className="w-4 h-4" /></button>
+                                    )}
+                                    {canDelete && !h.isEmailSent && (
+                                       <button
+                                          onClick={() => {
+                                             confirm({
+                                                title: "Delete Audit?",
+                                                message: "Are you sure you want to delete this daily audit permanently?",
+                                                variant: "danger",
+                                                onConfirm: () => deleteSessionMutation.mutate(h.workDate.split('T')[0])
+                                             });
+                                          }}
+                                          className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all"
+                                       >
+                                          <Trash2 className="w-4 h-4" />
+                                       </button>
+                                    )}
+                                 </div>
+                              </div>
+                              <div className="flex gap-2 pt-2">
+                                 <button
+                                    onClick={() => previewEmailMutation.mutate(h.workLogId)}
+                                    disabled={previewEmailMutation.isPending}
+                                    className="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                                 >
+                                    {previewEmailMutation.isPending && previewEmailMutation.variables === h.workLogId ? (
+                                       <div className="w-3.5 h-3.5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+                                    ) : (
+                                       <Eye className="w-4 h-4 text-slate-500" />
+                                    )}
+                                    View Mail
+                                 </button>
+                                 {!h.isEmailSent && (
+                                    <button
                                        onClick={() => {
-                                           confirm({
-                                               title: "Delete Audit?",
-                                               message: "Are you sure you want to delete this daily audit permanently?",
-                                               variant: "danger",
-                                               onConfirm: () => deleteSessionMutation.mutate(h.workDate.split('T')[0])
-                                           });
-                                       }} 
-                                       className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all"
-                                   >
-                                       <Trash2 className="w-4 h-4" />
-                                   </button>
+                                          confirm({
+                                             title: "Dispatch Report?",
+                                             message: "Are you sure you want to send this work report via email now?",
+                                             variant: "primary",
+                                             onConfirm: () => sendEmailMutation.mutate(h.workLogId)
+                                          });
+                                       }}
+                                       disabled={sendEmailMutation.isPending}
+                                       className="flex-1 py-2.5 bg-slate-800 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                                    >
+                                       {sendEmailMutation.isPending && sendEmailMutation.variables === h.workLogId ? (
+                                          <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                       ) : (
+                                          <Mail className="w-4 h-4 text-blue-400" />
+                                       )}
+                                       Send Mail
+                                    </button>
                                  )}
                               </div>
                            </div>
-                           <div className="flex gap-2 pt-2">
-                              <button
-                                 onClick={() => previewEmailMutation.mutate(h.workLogId)}
-                                 disabled={previewEmailMutation.isPending}
-                                 className="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                              >
-                                 {previewEmailMutation.isPending && previewEmailMutation.variables === h.workLogId ? (
-                                    <div className="w-3.5 h-3.5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
-                                 ) : (
-                                    <Eye className="w-4 h-4 text-slate-500" />
-                                 )}
-                                 View Mail
-                              </button>
-                              <button
-                                 onClick={() => sendEmailMutation.mutate(h.workLogId)}
-                                 disabled={sendEmailMutation.isPending}
-                                 className="flex-1 py-2.5 bg-slate-800 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                              >
-                                 {sendEmailMutation.isPending && sendEmailMutation.variables === h.workLogId ? (
-                                    <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                                 ) : (
-                                    <Mail className="w-4 h-4 text-blue-400" />
-                                 )}
-                                 Send Mail
-                              </button>
-                           </div>
-                        </div>
-                     ))}
+                        ))}
+                     </div>
                   </div>
                </div>
-            </div>
-         )}
+            )
+         }
 
          {/* 🎨 PREVIEW MODAL */}
          <Modal
@@ -450,39 +632,41 @@ export default function WorkReportPage() {
             size="full"
             footer={
                <div className="flex justify-end gap-3 w-full">
-                  <button 
+                  <button
                      onClick={() => setIsPreviewOpen(false)}
                      className="px-6 py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all"
                   >
                      Close
                   </button>
-                  <button 
-                     onClick={() => {
-                        if (activePreviewId) {
-                           sendEmailMutation.mutate(activePreviewId);
-                           setIsPreviewOpen(false);
-                        }
-                     }}
-                     disabled={sendEmailMutation.isPending}
-                     className="px-8 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-all flex items-center gap-2 shadow-md shadow-blue-100 disabled:opacity-50"
-                  >
-                     {sendEmailMutation.isPending ? (
-                        <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                     ) : (
-                        <Mail className="w-4 h-4" />
-                     )}
-                     Send Report Now
-                  </button>
+                  {!activePreviewReport?.isEmailSent && (
+                     <button
+                        onClick={() => {
+                           if (activePreviewId) {
+                              sendEmailMutation.mutate(activePreviewId);
+                              setIsPreviewOpen(false);
+                           }
+                        }}
+                        disabled={sendEmailMutation.isPending}
+                        className="px-8 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-all flex items-center gap-2 shadow-md shadow-blue-100 disabled:opacity-50"
+                     >
+                        {sendEmailMutation.isPending ? (
+                           <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                        ) : (
+                           <Mail className="w-4 h-4" />
+                        )}
+                        Send Report Now
+                     </button>
+                  )}
                </div>
             }
          >
             <div className="bg-white p-4 rounded-lg overflow-auto border border-slate-100 shadow-inner h-full flex flex-col">
-               <div 
+               <div
                   className="prose prose-sm max-w-none flex-1"
-                  dangerouslySetInnerHTML={{ __html: previewHtml || "" }} 
+                  dangerouslySetInnerHTML={{ __html: previewHtml || "" }}
                />
             </div>
          </Modal>
-      </div>
+      </div >
    );
 }

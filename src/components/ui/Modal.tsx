@@ -10,7 +10,9 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  size?: "sm" | "md" | "lg" | "xl" | "full";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "full";
+  bodyClassName?: string;
+  hideHeader?: boolean;
 }
 
 export const Modal = ({
@@ -20,6 +22,8 @@ export const Modal = ({
   children,
   footer,
   size = "md",
+  bodyClassName = "p-6",
+  hideHeader = false,
 }: ModalProps) => {
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -46,6 +50,8 @@ export const Modal = ({
     md: "max-w-lg",
     lg: "max-w-2xl",
     xl: "max-w-4xl",
+    "2xl": "max-w-6xl",
+    "3xl": "max-w-7xl",
     full: "max-w-[95vw] h-[95vh]",
   };
 
@@ -63,18 +69,24 @@ export const Modal = ({
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white">
-          <h2 className="text-lg font-bold text-gray-900 tracking-tight">{title}</h2>
-          <button 
-            onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-all border border-transparent hover:border-gray-200"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        {!hideHeader && (
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white">
+            <h2 className="text-lg font-bold text-gray-900 tracking-tight">{title}</h2>
+            <button 
+              onClick={onClose}
+              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-all border border-transparent hover:border-gray-200"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        )}
 
         {/* Body */}
-        <div className={cn("p-6 overflow-y-auto", size === "full" ? "flex-1" : "max-h-[70vh]")}>
+        <div className={cn(
+          "overflow-y-auto", 
+          size === "full" ? "flex-1" : (size === "xl" || size === "2xl" || size === "3xl" ? "max-h-[90vh]" : "max-h-[70vh]"),
+          bodyClassName
+        )}>
           {children}
         </div>
 

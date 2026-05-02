@@ -22,6 +22,16 @@ body {
   min-height: 100vh;
 }
 
+/* Hide number input arrows */
+.hide-arrows::-webkit-inner-spin-button,
+.hide-arrows::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.hide-arrows {
+  -moz-appearance: textfield;
+}
+
 @layer components {
   .sidebar-item {
     @apply flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-slate-50 text-slate-600;

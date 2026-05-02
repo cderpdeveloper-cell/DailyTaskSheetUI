@@ -25,6 +25,8 @@ export interface WorkLog {
     statusId: number;
     activeStatus: number;
     createDate: string;
+    isEmailSent: boolean;
+    emailSentDate?: string;
     client?: { clientId: number; clientName: string };
     project?: { projectId: number; projectName: string; projectColor?: string };
     tasks: WorkLogTask[];

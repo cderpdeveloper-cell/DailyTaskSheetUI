@@ -11,7 +11,8 @@ import {
   Clock,
   Calendar,
   Layers,
-  FileText
+  FileText,
+  Activity
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -60,18 +61,44 @@ export default function DashboardPage() {
   const hasWorkReport = allModules.some(m => m.moduleId === 5044 || m.name.toLowerCase().includes("work report"));
   const hasTaskSheet = allModules.some(m => m.moduleId === 5043 || m.name.toLowerCase().includes("task sheet"));
 
-  const stats = [
-    { label: "Total Employees", value: statsData?.totalEmployees || 0, icon: Users, color: "bg-blue-500", trend: "+12%" },
-    { label: "Active Projects", value: statsData?.activeProjects || 0, icon: Briefcase, color: "bg-purple-500", trend: "+5%" },
-    { label: "Reports Pending", value: statsData?.reportsPending || 0, icon: Clock, color: "bg-orange-500", trend: "-2%" },
-    { label: "Total Clients", value: statsData?.totalClients || 0, icon: Layers, color: "bg-emerald-500", trend: "+18%" },
-  ];
-
   const isManager = 
     user?.roleType?.toLowerCase().includes("manager") || 
     user?.roleName?.toLowerCase().includes("manager") ||
     user?.roleName?.toLowerCase().includes("admin") ||
-    user?.isTenant; // Tenants are also usually admins
+    user?.isTenant;
+
+  const stats = React.useMemo(() => {
+    if (!isManager && statsData?.statusWiseCounts) {
+      const statusCards = statsData.statusWiseCounts.map((s, i) => ({
+        label: s.statusName,
+        value: s.count,
+        icon: s.statusName.toLowerCase().includes("complete") ? CheckCircle2 : 
+              s.statusName.toLowerCase().includes("run") ? Activity : 
+              s.statusName.toLowerCase().includes("hold") ? Clock : BarChart3,
+        color: i === 0 ? "bg-emerald-500" : i === 1 ? "bg-blue-500" : i === 2 ? "bg-orange-500" : "bg-purple-500",
+        trend: ""
+      }));
+
+      // Add a total card if we have space
+      if (statusCards.length < 4) {
+        statusCards.push({
+          label: "Total Reports",
+          value: statsData?.totalEmployees || 0,
+          icon: FileText,
+          color: "bg-indigo-600",
+          trend: ""
+        });
+      }
+      return statusCards.slice(0, 4);
+    }
+
+    return [
+      { label: isManager ? "Total Employees" : "My Reports", value: statsData?.totalEmployees || 0, icon: Users, color: "bg-blue-500", trend: "" },
+      { label: isManager ? "Active Projects" : "My Projects", value: statsData?.activeProjects || 0, icon: Briefcase, color: "bg-purple-500", trend: "" },
+      { label: isManager ? "Reports Pending" : "Today's Pending", value: statsData?.reportsPending || 0, icon: Clock, color: "bg-orange-500", trend: "" },
+      { label: isManager ? "Total Clients" : "My Clients", value: statsData?.totalClients || 0, icon: Layers, color: "bg-emerald-500", trend: "" },
+    ];
+  }, [isManager, statsData]);
 
   return (
     <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-12">
@@ -126,43 +153,78 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Stats Grid - ONLY for Managers/Admins */}
-      {isManager && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, i) => (
-            <div key={i} className={cn(
-               "glass-card p-6 flex items-center gap-5 hover:translate-y-[-4px] transition-all cursor-pointer group",
-               isStatsLoading && "animate-pulse"
-            )}>
-              <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg", stat.color)}>
-                <stat.icon className="w-7 h-7" />
-              </div>
-              <div>
-                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">{stat.label}</p>
-                <div className="flex items-baseline gap-2 mt-1">
-                  <h3 className="text-2xl font-black text-gray-900 leading-none">
-                    {isStatsLoading ? "..." : stat.value}
-                  </h3>
-                </div>
+      {/* Stats Grid - Visible to ALL, filtered by API */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat, i) => (
+          <div key={i} className={cn(
+             "glass-card p-6 flex items-center gap-5 hover:translate-y-[-4px] transition-all cursor-pointer group",
+             isStatsLoading && "animate-pulse"
+          )}>
+            <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg", stat.color)}>
+              <stat.icon className="w-7 h-7" />
+            </div>
+            <div>
+              <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">{stat.label}</p>
+              <div className="flex items-baseline gap-2 mt-1">
+                <h3 className="text-2xl font-black text-gray-900 leading-none">
+                  {isStatsLoading ? "..." : stat.value}
+                </h3>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {isManager && (
-            <div className="lg:col-span-2 glass-card p-8 min-h-[400px]">
+            <div className="lg:col-span-2 glass-card p-8 min-h-[400px] flex flex-col">
                 <div className="flex items-center justify-between mb-8">
-                    <h3 className="text-xl font-bold text-gray-900">Workforce Activity</h3>
-                    <BarChart3 className="w-5 h-5 text-gray-400" />
+                    <div>
+                        <h3 className="text-xl font-bold text-gray-900">{isManager ? "Workforce Monthly Overview" : "My Monthly Activity Overview"}</h3>
+                        <p className="text-xs text-gray-400 font-medium mt-1 uppercase tracking-wider">{isManager ? "Current Month Statistics" : "My Performance Stats"}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                        {statsData?.monthlyOverview?.[0]?.statusCounts.map((status, i) => (
+                            <span key={i} className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded-md border border-gray-100 shadow-sm transition-all hover:bg-white">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: status.statusColor }}></div> {status.statusName}
+                            </span>
+                        ))}
+                    </div>
                 </div>
                 
-                <div className="flex items-center justify-center h-[300px] text-gray-300 italic font-medium bg-slate-50/50 rounded-3xl border-2 border-dashed border-gray-100">
-                    Chart Placeholder - Integrations coming soon...
+                <div className="flex-1 flex items-end justify-between gap-4 pb-4">
+                    {(statsData?.monthlyOverview && statsData.monthlyOverview.length > 0) ? (
+                        statsData.monthlyOverview.map((monthData, idx) => {
+                            const maxValue = Math.max(...statsData.monthlyOverview.flatMap(m => m.statusCounts.map(s => s.count)), 100);
+                            return (
+                                <div key={idx} className="flex-1 flex flex-col items-center gap-3 group">
+                                    <div className="w-full flex items-end gap-1 px-1 h-48 relative">
+                                        {monthData.statusCounts.map((status, sIdx) => (
+                                            <div 
+                                                key={sIdx}
+                                                className="flex-1 rounded-t-sm transition-all cursor-help relative group/bar hover:brightness-110"
+                                                style={{ 
+                                                    height: `${(status.count / maxValue) * 100}%`,
+                                                    backgroundColor: status.statusColor,
+                                                    opacity: 0.85
+                                                }}
+                                            >
+                                                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover/bar:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-20 shadow-xl border border-white/10">
+                                                    {status.statusName}: {status.count}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <span className="text-xs font-bold text-gray-400 group-hover:text-gray-900 transition-colors uppercase tracking-widest">{monthData.month}</span>
+                                </div>
+                            );
+                        })
+                    ) : (
+                        <div className="w-full flex items-center justify-center h-48 text-gray-400 font-medium">
+                            {isStatsLoading ? "Loading overview..." : "No data available"}
+                        </div>
+                    )}
                 </div>
             </div>
-        )}
 
         <div className={cn("glass-card p-8 overflow-hidden", !isManager && "lg:col-span-3")}>
            <h3 className="text-xl font-bold text-gray-900 mb-6 font-primary">Recent Notifications</h3>

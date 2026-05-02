@@ -31,6 +31,7 @@ export interface User {
   roleType?: string;
   companyId: number;
   isTenant: boolean;
+  defaultBreakDuration: number;
 }
 
 export interface Company {

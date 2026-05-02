@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import Cookies from "js-cookie";
 import { Toaster } from "sonner";
+import { PatchNotesModal } from "@/components/PatchNotesModal";
 
 export default function DashboardLayout({
   children,
@@ -64,6 +65,7 @@ export default function DashboardLayout({
         </footer>
       </div>
       <Toaster richColors position="top-right" />
+      <PatchNotesModal />
     </div>
   );
 }

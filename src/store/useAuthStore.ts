@@ -11,6 +11,7 @@ interface AuthState {
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
   setAuth: (user: User, accessToken: string, refreshToken: string) => void;
+  updateUser: (user: User) => void;
   logout: () => void;
 }
 
@@ -28,6 +29,7 @@ export const useAuthStore = create<AuthState>()(
         Cookies.set("refreshToken", refreshToken);
         set({ user, isAuthenticated: true, accessToken, refreshToken });
       },
+      updateUser: (user) => set({ user }),
       logout: () => {
         Cookies.remove("accessToken");
         Cookies.remove("refreshToken");
