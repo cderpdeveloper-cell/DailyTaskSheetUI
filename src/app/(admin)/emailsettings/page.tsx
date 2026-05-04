@@ -193,6 +193,7 @@ export default function EmailSettingsPage() {
       <th style="border: 1.5px solid #333; padding: 12px; width: 40px; text-align: center;">SR</th>
       <th style="border: 1.5px solid #333; padding: 12px; text-align: left;">Client Name</th>
       <th style="border: 1.5px solid #333; padding: 12px; text-align: left;">Task Description</th>
+      <th style="border: 1.5px solid #333; padding: 12px; width: 110px; text-align: center;">Status</th>
       <th style="border: 1.5px solid #333; padding: 12px; width: 80px; text-align: center;">Time</th>
     </tr>
   </thead>
@@ -208,11 +209,17 @@ export default function EmailSettingsPage() {
             <div style="font-size: 13px; color: #333;">
                <span style="color: #3b82f6;">({{Mode}})</span>
             </div>
+            <div style="font-size: 13px; color: #333;">
+               <span style="color: #3b82f6;">{{Team}}</span>
+            </div>
         </td>
         <td style="border: 1.5px solid #333; padding: 12px; vertical-align: top;">
             <div style="color: #1e293b; font-size: 14px;">
-               {{DescriptionStatus}}
+               {{Description}}
             </div>
+        </td>
+        <td style="border: 1.5px solid #333; padding: 12px; text-align: center; vertical-align: top;">
+            {{StatusName}}
         </td>
         <td rowspan="{{RowSpan}}" style="border: 1.5px solid #333; padding: 12px; text-align: center; font-weight: bold; vertical-align: top;">{{Time}}</td>
       </tr>
@@ -221,8 +228,11 @@ export default function EmailSettingsPage() {
       <tr>
         <td style="border: 1.5px solid #333; padding: 12px; vertical-align: top;">
             <div style="color: #1e293b; font-size: 14px;">
-               {{DescriptionStatus}}
+               {{Description}}
             </div>
+        </td>
+        <td style="border: 1.5px solid #333; padding: 12px; text-align: center; vertical-align: top;">
+            {{StatusName}}
         </td>
       </tr>
       {{/OtherLogs}}
@@ -314,6 +324,8 @@ export default function EmailSettingsPage() {
     { label: 'Input Time', placeholder: '{{Time}}' },
     { label: 'Session Mode', placeholder: '{{Mode}}' },
     { label: 'Team Members', placeholder: '{{Team}}' },
+    { label: 'Description', placeholder: '{{Description}}' },
+    { label: 'Status', placeholder: '{{StatusName}}' },
     { label: 'Desc + Status', placeholder: '{{DescriptionStatus}}' }
   ];
 
@@ -636,6 +648,7 @@ export default function EmailSettingsPage() {
                         ?.replace(/{{StatusName}}/g, "Running")
                         ?.replace(/{{Description}}/g, "• Task detail here...")
                         ?.replace(/{{DescriptionStatus}}/g, "• Task detail here... - Running")
+                        ?.replace(/{{Status}}/g, "Running")
                         ?.replace(/{{TasksTable}}/g, "Table Preview...") || ""
                     }} />
                   </div>

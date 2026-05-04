@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToastStore } from "@/store/useToastStore";
 import {
    Calendar, Plus, Trash2, Save, History, Clock, FileText, ChevronDown, Mail,
-   Users, Activity, Edit2, ArrowRight, X, Search, Briefcase, Zap, CheckCircle, ChevronUp, ChevronRight, Eye
+   Users, Activity, Edit2, ArrowRight, X, Search, Briefcase, Zap, CheckCircle, ChevronUp, ChevronRight, Eye, GripVertical
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { workLogService, WorkLogCreateDTO, WorkLog, WorkReportSessionDTO } from "@/services/api/workLog.service";
@@ -122,6 +122,8 @@ export default function WorkReportPage() {
    const [previewHtml, setPreviewHtml] = useState<string | null>(null);
    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
    const [activePreviewId, setActivePreviewId] = useState<number | null>(null);
+   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+   const [dragEnabledIndex, setDragEnabledIndex] = useState<number | null>(null);
 
    const { data: clientsRaw = [] } = useQuery({ queryKey: ["clientsList", companyId], queryFn: () => clientService.list(companyId), select: (res) => res.data || [] });
    const { data: projectsRaw = [] } = useQuery({ queryKey: ["projectsList", companyId], queryFn: () => projectService.list(companyId), select: (res) => res.data || [] });
@@ -237,6 +239,41 @@ export default function WorkReportPage() {
    };
    const removeSubActivity = (logIdx: number, taskIdx: number) => { if (logs[logIdx].tasks.length > 1) { const next = [...logs]; next[logIdx].tasks = next[logIdx].tasks.filter((_, i) => i !== taskIdx); setLogs(next); } };
    const updateActivityParam = (logIdx: number, taskIdx: number, field: string, value: any) => { const next = [...logs]; (next[logIdx].tasks[taskIdx] as any)[field] = value; setLogs(next); };
+
+   const handleDragStart = (e: React.DragEvent, index: number) => {
+      setDraggedIndex(index);
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/html", e.currentTarget.innerHTML);
+   };
+
+   const handleDragOver = (e: React.DragEvent, index: number) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+   };
+
+   const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+      e.preventDefault();
+      if (draggedIndex === null || draggedIndex === dropIndex) return;
+
+      const newLogs = [...logs];
+      const draggedLog = newLogs[draggedIndex];
+      newLogs.splice(draggedIndex, 1);
+      newLogs.splice(dropIndex, 0, draggedLog);
+
+      setLogs(newLogs);
+      setDraggedIndex(null);
+      setDragEnabledIndex(null);
+
+      if (expandedIndex === draggedIndex) {
+         setExpandedIndex(dropIndex);
+      } else if (expandedIndex !== null) {
+         if (draggedIndex < expandedIndex && dropIndex >= expandedIndex) {
+            setExpandedIndex(expandedIndex - 1);
+         } else if (draggedIndex > expandedIndex && dropIndex <= expandedIndex) {
+            setExpandedIndex(expandedIndex + 1);
+         }
+      }
+   };
 
    const sessionMutation = useMutation({
       mutationFn: (data: WorkReportSessionDTO) => workLogService.saveSession(data),
@@ -370,7 +407,18 @@ export default function WorkReportPage() {
                   const projectName = projectOptions.find(o => o.id === log.projectId)?.name || "Project Pending";
 
                   return (
-                     <div key={logIdx} className={`bg-white border-2 ${isExpanded ? 'border-blue-600 shadow-lg' : 'border-slate-200 hover:border-slate-300'} rounded-xl transition-all overflow-visible`}>
+                     <div 
+                        key={logIdx} 
+                        draggable={dragEnabledIndex === logIdx && !isExpanded}
+                        onDragStart={(e) => handleDragStart(e, logIdx)}
+                        onDragOver={(e) => handleDragOver(e, logIdx)}
+                        onDrop={(e) => handleDrop(e, logIdx)}
+                        onDragEnd={() => {
+                           setDraggedIndex(null);
+                           setDragEnabledIndex(null);
+                        }}
+                        className={`bg-white border-2 ${isExpanded ? 'border-blue-600 shadow-lg' : 'border-slate-200 hover:border-slate-300'} rounded-xl transition-all overflow-visible ${draggedIndex === logIdx ? 'opacity-40 border-dashed scale-[0.98]' : ''}`}
+                     >
 
                         {/* COLLAPSED HEADER / SUMMARY TIER */}
                         <div
@@ -378,6 +426,17 @@ export default function WorkReportPage() {
                            className={`flex items-center justify-between px-6 py-4 cursor-pointer select-none transition-colors rounded-t-lg ${!isExpanded ? 'bg-white' : 'bg-slate-50 border-b border-slate-100'}`}
                         >
                            <div className="flex items-center gap-4 flex-1">
+                              {!isExpanded && (
+                                 <div 
+                                    className="text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing px-2 -ml-2" 
+                                    title="Drag to reorder"
+                                    onMouseEnter={() => setDragEnabledIndex(logIdx)}
+                                    onMouseLeave={() => setDragEnabledIndex(null)}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                 >
+                                    <GripVertical className="w-5 h-5" />
+                                 </div>
+                              )}
                               <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${isExpanded ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'}`}>#{logIdx + 1}</div>
                               {!isExpanded ? (
                                  <div className="flex items-center gap-4 text-xs">

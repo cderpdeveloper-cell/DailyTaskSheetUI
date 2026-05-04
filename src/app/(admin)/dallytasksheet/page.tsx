@@ -26,7 +26,8 @@ import {
   ChevronRight,
   Eye,
   Settings,
-  Coffee
+  Coffee,
+  GripVertical
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { Button } from "@/components/ui/Button";
@@ -233,6 +234,8 @@ export default function TaskSheetPage() {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [editingReportId, setEditingReportId] = useState<number | null>(null);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragEnabledIndex, setDragEnabledIndex] = useState<number | null>(null);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [activePreviewId, setActivePreviewId] = useState<number | null>(null);
@@ -385,6 +388,43 @@ export default function TaskSheetPage() {
     },
     onError: (err: any) => addToast(err.response?.data?.message || "Failed to delete report", "error"),
   });
+
+  // Drag and Drop Handlers
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    // We must set some data for Firefox to allow dragging
+    e.dataTransfer.setData("text/html", e.currentTarget.innerHTML);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === dropIndex) return;
+
+    const newWorks = [...works];
+    const draggedWork = newWorks[draggedIndex];
+    newWorks.splice(draggedIndex, 1);
+    newWorks.splice(dropIndex, 0, draggedWork);
+    
+    const reorderedWorks = newWorks.map((w, i) => ({ ...w, srNo: i + 1 }));
+    setWorks(reorderedWorks);
+    setDraggedIndex(null);
+
+    if (expandedIndex === draggedIndex) {
+      setExpandedIndex(dropIndex);
+    } else if (expandedIndex !== null) {
+      if (draggedIndex < expandedIndex && dropIndex >= expandedIndex) {
+        setExpandedIndex(expandedIndex - 1);
+      } else if (draggedIndex > expandedIndex && dropIndex <= expandedIndex) {
+        setExpandedIndex(expandedIndex + 1);
+      }
+    }
+  };
 
   // Dynamic Form Handlers
   const addWork = () => {
@@ -676,7 +716,18 @@ export default function TaskSheetPage() {
             const duration = calculateTotalHours(work.timeLogs);
 
             return (
-              <div key={idx} className={`bg-white border-2 ${isExpanded ? 'border-blue-600 shadow-lg' : 'border-slate-200 hover:border-slate-300'} rounded-2xl transition-all overflow-visible`}>
+              <div 
+                key={work.srNo || idx}
+                draggable={dragEnabledIndex === idx && !isExpanded}
+                onDragStart={(e) => handleDragStart(e, idx)}
+                onDragOver={(e) => handleDragOver(e, idx)}
+                onDrop={(e) => handleDrop(e, idx)}
+                onDragEnd={() => {
+                  setDraggedIndex(null);
+                  setDragEnabledIndex(null);
+                }}
+                className={`bg-white border-2 ${isExpanded ? 'border-blue-600 shadow-lg' : 'border-slate-200 hover:border-slate-300'} rounded-2xl transition-all overflow-visible ${draggedIndex === idx ? 'opacity-40 border-dashed scale-[0.98]' : ''}`}
+              >
 
                 {/* COLLAPSED HEADER / SUMMARY TIER */}
                 <div
@@ -684,6 +735,17 @@ export default function TaskSheetPage() {
                   className={`flex items-center justify-between px-6 py-4 cursor-pointer select-none transition-colors rounded-t-xl ${!isExpanded ? 'bg-white' : 'bg-slate-50 border-b border-slate-100'}`}
                 >
                   <div className="flex items-center gap-4 flex-1">
+                    {!isExpanded && (
+                      <div 
+                        className="text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing px-2 -ml-2" 
+                        title="Drag to reorder"
+                        onMouseEnter={() => setDragEnabledIndex(idx)}
+                        onMouseLeave={() => setDragEnabledIndex(null)}
+                        onMouseDown={(e) => e.stopPropagation()}
+                      >
+                        <GripVertical className="w-5 h-5" />
+                      </div>
+                    )}
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${isExpanded ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'}`}>#{idx + 1}</div>
                     {!isExpanded ? (
                       <div className="flex items-center gap-4 text-xs">
