@@ -5,7 +5,7 @@ export interface DashboardStats {
   totalEmployees: number;
   activeProjects: number;
   totalClients: number;
-  reportsPending: number;
+  totalModules: number;
   recentActivities: RecentActivity[];
   monthlyOverview: MonthlyOverview[];
   statusWiseCounts: StatusCount[];
@@ -30,8 +30,11 @@ export interface RecentActivity {
 }
 
 export const dashboardService = {
-  getStats: async (): Promise<ApiResponse<DashboardStats>> => {
-    const response = await api.get<ApiResponse<DashboardStats>>("/Dashboard/Stats");
+  getStats: async (month?: number, year?: number): Promise<ApiResponse<DashboardStats>> => {
+    const params: Record<string, number> = {};
+    if (month !== undefined) params.month = month;
+    if (year !== undefined) params.year = year;
+    const response = await api.get<ApiResponse<DashboardStats>>("/Dashboard/Stats", { params });
     return response.data;
   },
 };
