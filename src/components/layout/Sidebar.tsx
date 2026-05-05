@@ -4,8 +4,8 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { 
-  ChevronRight, 
+import {
+  ChevronRight,
   LogOut,
   Layers,
   LayoutDashboard
@@ -20,14 +20,13 @@ export const Sidebar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, isAuthenticated } = useAuthStore();
-  
+
   // Dynamic roleID logic: try from user object fields or default to 1, but allow 0
   const roleId = useMemo(() => {
     if (!user) return 1;
     // @ts-ignore - Handle various API field naming conventions
     const id = user.roleId !== undefined && user.roleId !== null ? user.roleId : (user.RoleId ?? user.RoleMasterId ?? user.EmployeeID);
     const finalRole = id !== undefined && id !== null ? Number(id) : 1;
-    console.log("[Sidebar] Current RoleID extracted:", finalRole, "from User:", user);
     return finalRole;
   }, [user]);
 
@@ -36,24 +35,22 @@ export const Sidebar = () => {
   const { data: menuData = [], isLoading, error } = useQuery({
     queryKey: ["menu", roleId, isTenant],
     queryFn: async () => {
-        console.log("[Sidebar] Fetching menu for RoleID:", roleId, "isTenant:", isTenant);
-        const res = await menuService.getMenu(roleId, isTenant);
-        console.log("[Sidebar] Menu Response:", res);
-        return res.data || [];
+      const res = await menuService.getMenu(roleId, isTenant);
+      return res.data || [];
     },
     enabled: true, // Always fetch if Sidebar is mounted
   });
 
   if (error) {
-      console.error("[Sidebar] Menu Fetch Error:", error);
+    console.error("[Sidebar] Menu Fetch Error:", error);
   }
 
   // Handle path mapping
   const getPath = (item: MenuItem) => {
     if (item.url && item.url !== "/" && item.url !== "#") {
-        return (item.url.startsWith("/") ? item.url : "/" + item.url);
+      return (item.url.startsWith("/") ? item.url : "/" + item.url);
     }
-    
+
     const ctrl = item.controller?.toLowerCase() || "";
     if (ctrl === "companymaster") return "/company";
     if (ctrl === "employeemaster") return "/employee";
@@ -65,15 +62,15 @@ export const Sidebar = () => {
     if (ctrl === "emailsettings" || ctrl === "mailtemplate") return "/emailsettings";
     if (ctrl === "reports" || ctrl === "dailytasksheet" || ctrl === "workreport") return "/dallytasksheet";
     if (ctrl === "home") return "/dashboard";
-    
-    return "/" + ctrl.replace("master", ""); 
+
+    return "/" + ctrl.replace("master", "");
   };
 
   const NavItem = ({ item, depth = 0 }: { item: MenuItem; depth?: number }) => {
     const hasChildren = item.subMenus && item.subMenus.length > 0;
     const path = getPath(item);
     const isCurrent = pathname === path;
-    const isChildActive = useMemo(() => 
+    const isChildActive = useMemo(() =>
       hasChildren && item.subMenus.some(child => pathname === getPath(child)),
       [hasChildren, item.subMenus, pathname]
     );
@@ -92,30 +89,30 @@ export const Sidebar = () => {
           onClick={() => hasChildren ? setIsOpen(!isOpen) : router.push(path)}
         >
           <div className="flex items-center gap-3">
-             <div className={cn(
-                 "transition-colors",
-                 (isCurrent || isChildActive) ? "text-primary" : "text-slate-400 group-hover:text-primary"
-             )}>
-                <IconComponent className={cn(depth > 0 ? "w-3.5 h-3.5" : "w-4 h-4")} />
-             </div>
-             <span className={cn(
-               "tracking-tight",
-               depth > 0 ? "text-[12.5px]" : "text-sm",
-               isCurrent ? "font-bold" : "font-medium"
-             )}>
-               {item.name.replace("Dally", "Daily")}
-             </span>
+            <div className={cn(
+              "transition-colors",
+              (isCurrent || isChildActive) ? "text-primary" : "text-slate-400 group-hover:text-primary"
+            )}>
+              <IconComponent className={cn(depth > 0 ? "w-3.5 h-3.5" : "w-4 h-4")} />
+            </div>
+            <span className={cn(
+              "tracking-tight",
+              depth > 0 ? "text-[12.5px]" : "text-sm",
+              isCurrent ? "font-bold" : "font-medium"
+            )}>
+              {item.name.replace("Dally", "Daily")}
+            </span>
           </div>
           {hasChildren && (
-            <ChevronRight 
+            <ChevronRight
               className={cn(
                 "w-3.5 h-3.5 transition-transform duration-300 text-slate-400",
                 isOpen && "rotate-90"
-              )} 
+              )}
             />
           )}
         </div>
-        
+
         {hasChildren && isOpen && (
           <div className="flex flex-col ml-5 pl-1 border-l border-slate-100 mt-1 mb-2 animate-in fade-in duration-300">
             {item.subMenus
@@ -145,13 +142,13 @@ export const Sidebar = () => {
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto no-scrollbar">
         {isLoading ? (
           <div className="space-y-2">
-              {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-10 bg-slate-50 animate-pulse rounded-lg"></div>)}
+            {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-10 bg-slate-50 animate-pulse rounded-lg"></div>)}
           </div>
         ) : menuData
-            .sort((a: MenuItem, b: MenuItem) => a.displayOrder - b.displayOrder)
-            .map((item: MenuItem) => (
-          <NavItem key={item.moduleId} item={item} />
-        ))}
+          .sort((a: MenuItem, b: MenuItem) => a.displayOrder - b.displayOrder)
+          .map((item: MenuItem) => (
+            <NavItem key={item.moduleId} item={item} />
+          ))}
       </nav>
 
     </aside>
