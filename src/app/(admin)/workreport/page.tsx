@@ -232,10 +232,10 @@ export default function WorkReportPage() {
 
       if (field === 'clientId') trackRecentClient(value);
    };
-   const addSubActivity = (logIdx: number) => { 
-      const next = [...logs]; 
-      next[logIdx].tasks = [{ description: "", statusId: defaultStatusId, isCompleted: false }, ...next[logIdx].tasks]; 
-      setLogs(next); 
+   const addSubActivity = (logIdx: number) => {
+      const next = [...logs];
+      next[logIdx].tasks = [{ description: "", statusId: defaultStatusId, isCompleted: false }, ...next[logIdx].tasks];
+      setLogs(next);
    };
    const removeSubActivity = (logIdx: number, taskIdx: number) => { if (logs[logIdx].tasks.length > 1) { const next = [...logs]; next[logIdx].tasks = next[logIdx].tasks.filter((_, i) => i !== taskIdx); setLogs(next); } };
    const updateActivityParam = (logIdx: number, taskIdx: number, field: string, value: any) => { const next = [...logs]; (next[logIdx].tasks[taskIdx] as any)[field] = value; setLogs(next); };
@@ -341,6 +341,37 @@ export default function WorkReportPage() {
       }
    };
 
+   // AUTO-LOAD SESSION FOR SELECTED DATE
+   useEffect(() => {
+      if (history.length > 0 && selectedDate && defaultStatusId) {
+         const logsForDate = history.filter(h => h.workDate.split('T')[0] === selectedDate);
+         if (logsForDate.length > 0) {
+            const isDifferentDate = logs.length > 0 && logs[0].workDate !== selectedDate;
+            const isBlankSession = logs.length === 1 && logs[0].clientId === 0;
+
+            if (isDifferentDate || isBlankSession) {
+               setLogs(logsForDate.map(h => ({
+                  clientId: h.clientId,
+                  projectId: h.projectId,
+                  workDate: selectedDate,
+                  inputTime: h.inputTime,
+                  mode: h.mode,
+                  statusId: h.statusId || defaultStatusId,
+                  otherEmployeeIds: h.otherEmployeeIds || "",
+                  tasks: h.tasks.map(t => ({ description: t.description, statusId: t.statusId, isCompleted: t.isCompleted }))
+               })));
+               setExpandedIndex(0);
+            }
+         } else {
+            // If no data for this date, but we are showing data from another date, reset to blank
+            if (logs.length > 0 && logs[0].workDate !== selectedDate) {
+               setLogs([{ clientId: 0, projectId: 0, workDate: selectedDate, inputTime: 0, mode: "AnyDesk", statusId: defaultStatusId, otherEmployeeIds: "", tasks: [{ description: "", statusId: defaultStatusId, isCompleted: false }] }]);
+               setExpandedIndex(0);
+            }
+         }
+      }
+   }, [selectedDate, history, defaultStatusId]);
+
    // --- Keyboard Shortcuts ---
    useEffect(() => {
       const handleKeys = (e: KeyboardEvent) => {
@@ -407,8 +438,8 @@ export default function WorkReportPage() {
                   const projectName = projectOptions.find(o => o.id === log.projectId)?.name || "Project Pending";
 
                   return (
-                     <div 
-                        key={logIdx} 
+                     <div
+                        key={logIdx}
                         draggable={dragEnabledIndex === logIdx && !isExpanded}
                         onDragStart={(e) => handleDragStart(e, logIdx)}
                         onDragOver={(e) => handleDragOver(e, logIdx)}
@@ -427,8 +458,8 @@ export default function WorkReportPage() {
                         >
                            <div className="flex items-center gap-4 flex-1">
                               {!isExpanded && (
-                                 <div 
-                                    className="text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing px-2 -ml-2" 
+                                 <div
+                                    className="text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing px-2 -ml-2"
                                     title="Drag to reorder"
                                     onMouseEnter={() => setDragEnabledIndex(logIdx)}
                                     onMouseLeave={() => setDragEnabledIndex(null)}
@@ -469,22 +500,22 @@ export default function WorkReportPage() {
                                  <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-1">
                                        <label className="text-[11px] font-bold text-slate-500 ml-1 uppercase tracking-tight">Client Profile</label>
-                                       <SimpleSearchSelect 
-                                          options={clientOptions} 
-                                          value={log.clientId} 
-                                          onChange={(v: number) => updateClientDetail(logIdx, 'clientId', v)} 
-                                          placeholder="Select Client" 
-                                          sortMode="recentLast" 
-                                          disabledOptions={logs.map(l => l.clientId)} 
+                                       <SimpleSearchSelect
+                                          options={clientOptions}
+                                          value={log.clientId}
+                                          onChange={(v: number) => updateClientDetail(logIdx, 'clientId', v)}
+                                          placeholder="Select Client"
+                                          sortMode="recentLast"
+                                          disabledOptions={logs.map(l => l.clientId)}
                                        />
                                     </div>
                                     <div className="space-y-1">
                                        <label className="text-[11px] font-bold text-slate-500 ml-1 uppercase tracking-tight">Project Scope</label>
-                                       <SimpleSearchSelect 
-                                          options={projectOptions} 
-                                          value={log.projectId} 
-                                          onChange={(v: number) => updateClientDetail(logIdx, 'projectId', v)} 
-                                          placeholder="Select Project" 
+                                       <SimpleSearchSelect
+                                          options={projectOptions}
+                                          value={log.projectId}
+                                          onChange={(v: number) => updateClientDetail(logIdx, 'projectId', v)}
+                                          placeholder="Select Project"
                                        />
                                     </div>
                                  </div>
@@ -564,7 +595,7 @@ export default function WorkReportPage() {
 
                                           <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-blue-50 focus-within:border-blue-400 transition-all">
                                              <textarea
-                                                value={task.description} 
+                                                value={task.description}
                                                 onChange={(e) => updateActivityParam(logIdx, tIdx, 'description', e.target.value)}
                                                 placeholder="Elaborate on work performed..."
                                                 className="w-full h-60 p-3 bg-white border-none text-sm text-slate-700 focus:ring-0 outline-none resize-none placeholder:text-slate-300 leading-relaxed"

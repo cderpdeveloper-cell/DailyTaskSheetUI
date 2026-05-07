@@ -410,7 +410,7 @@ export default function TaskSheetPage() {
     const draggedWork = newWorks[draggedIndex];
     newWorks.splice(draggedIndex, 1);
     newWorks.splice(dropIndex, 0, draggedWork);
-    
+
     const reorderedWorks = newWorks.map((w, i) => ({ ...w, srNo: i + 1 }));
     setWorks(reorderedWorks);
     setDraggedIndex(null);
@@ -716,7 +716,7 @@ export default function TaskSheetPage() {
             const duration = calculateTotalHours(work.timeLogs);
 
             return (
-              <div 
+              <div
                 key={work.srNo || idx}
                 draggable={dragEnabledIndex === idx && !isExpanded}
                 onDragStart={(e) => handleDragStart(e, idx)}
@@ -736,8 +736,8 @@ export default function TaskSheetPage() {
                 >
                   <div className="flex items-center gap-4 flex-1">
                     {!isExpanded && (
-                      <div 
-                        className="text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing px-2 -ml-2" 
+                      <div
+                        className="text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing px-2 -ml-2"
                         title="Drag to reorder"
                         onMouseEnter={() => setDragEnabledIndex(idx)}
                         onMouseLeave={() => setDragEnabledIndex(null)}
@@ -874,7 +874,7 @@ export default function TaskSheetPage() {
         </div>
       </div>
 
-      {/* 🚀 HISTORY DRAWER */}
+      {/*  HISTORY DRAWER */}
       {isHistoryModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-end">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-none" onClick={() => setIsHistoryModalOpen(false)} />

@@ -56,14 +56,14 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 font-sans">
       <div className="max-w-md w-full bg-white rounded-3xl border border-slate-200 shadow-2xl shadow-blue-500/5 p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        
+
         <div className="space-y-2">
-            <h1 className="text-3xl font-black text-slate-800 tracking-tighter">
-                Welcome <span className="text-blue-600">Back</span>
-            </h1>
-            <p className="text-sm font-medium text-slate-400 lowercase italic tracking-tight">
-                Sign in to your DailyWorkReport account
-            </p>
+          <h1 className="text-3xl font-black text-slate-800 tracking-tighter">
+            Welcome <span className="text-blue-600">Back</span>
+          </h1>
+          <p className="text-sm font-medium text-slate-400 lowercase italic tracking-tight">
+            Sign in to your DailyWorkReport account
+          </p>
         </div>
 
         {error && (
@@ -95,32 +95,32 @@ export default function LoginPage() {
           />
 
           <div className="pt-2">
-            <Button 
-                type="submit" 
-                className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-sm tracking-widest uppercase shadow-lg shadow-blue-600/20 transition-all active:scale-[0.98]" 
-                isLoading={isSubmitting}
+            <Button
+              type="submit"
+              className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-sm tracking-widest uppercase shadow-lg shadow-blue-600/20 transition-all active:scale-[0.98]"
+              isLoading={isSubmitting}
             >
-                Sign In
-                <LogIn className="w-4 h-4 ml-3" />
+              Sign In
+              <LogIn className="w-4 h-4 ml-3" />
             </Button>
           </div>
-          
+
           <div className="text-center pt-2">
-             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-loose">
-                Don't have an account?{" "}
-                <button 
-                    type="button" 
-                    onClick={() => router.push('/signup')} 
-                    className="text-blue-600 hover:text-blue-700 transition-colors flex items-center justify-center gap-1 mx-auto mt-1"
-                >
-                    Create Account <ArrowRight className="w-3 h-3" />
-                </button>
-             </p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-loose">
+              Don't have an account?{" "}
+              <button
+                type="button"
+                onClick={() => router.push('/signup')}
+                className="text-blue-600 hover:text-blue-700 transition-colors flex items-center justify-center gap-1 mx-auto mt-1"
+              >
+                Create Account <ArrowRight className="w-3 h-3" />
+              </button>
+            </p>
           </div>
         </form>
 
         <p className="text-center text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em]">
-            DailyWorkReport © {new Date().getFullYear()} All Rights Reserved
+          DailyWorkReport © {new Date().getFullYear()} All Rights Reserved
         </p>
       </div>
     </div>

@@ -53,6 +53,9 @@ export const workLogService = {
     getLogs: (employeeId?: number) => 
         api.get<ApiResponse<WorkLog[]>>(`/WorkLogs/List${employeeId ? `/${employeeId}` : ''}`),
     
+    getLogsByDate: (date: string, employeeId?: number) =>
+        api.get<ApiResponse<WorkLog[]>>(`/WorkLogs/ByDate/${date}${employeeId ? `/${employeeId}` : ''}`),
+    
     getLog: (id: number) =>
         api.get<ApiResponse<WorkLog>>(`/WorkLogs/${id}`),
     
