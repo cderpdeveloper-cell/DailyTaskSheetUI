@@ -5,7 +5,7 @@ import { cn } from "@/utils/cn";
 
 interface Column<T> {
   header: string;
-  accessor: keyof T | ((item: T) => React.ReactNode);
+  accessor: keyof T | ((item: T, index: number) => React.ReactNode);
   className?: string;
 }
 
@@ -30,7 +30,7 @@ export const Table = <T extends { [key: string]: any }>({
                 <th 
                   key={i} 
                   className={cn(
-                    "px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 leading-none",
+                    "px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 leading-none sticky top-0 bg-gray-50/80 backdrop-blur-sm z-10",
                     col.className
                   )}
                 >
@@ -71,7 +71,7 @@ export const Table = <T extends { [key: string]: any }>({
                       )}
                     >
                       {typeof col.accessor === "function" 
-                        ? col.accessor(item) 
+                        ? col.accessor(item, i) 
                         : item[col.accessor as string]}
                     </td>
                   ))}

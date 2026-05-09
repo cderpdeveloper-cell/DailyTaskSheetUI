@@ -17,6 +17,7 @@ export interface MonthlyOverview {
 }
 
 export interface StatusCount {
+  statusId: number;
   statusName: string;
   statusColor: string;
   count: number;
@@ -37,4 +38,9 @@ export const dashboardService = {
     const response = await api.get<ApiResponse<DashboardStats>>("/Dashboard/Stats", { params });
     return response.data;
   },
+  getDetailedTasks: async (statusId: number, month: number, year: number): Promise<ApiResponse<any[]>> => {
+    const params = { statusId, month, year };
+    const response = await api.get<ApiResponse<any[]>>("/Dashboard/DetailedTasks", { params });
+    return response.data;
+  }
 };
