@@ -242,7 +242,7 @@ export default function EmailSettingsPage() {
   `.trim();
 
   const DEFAULT_DAILY_TASK_HTML = `
-<table border="1" style="width:100%; border-collapse: collapse; border: 1.5px solid #333; font-family: Arial, sans-serif; font-size: 13px;">
+<table border="1" style="width:100%; border-collapse: collapse; border: 1.5px solid #333; font-family: Arial, sans-serif; font-size: 16px;">
   <thead>
     <tr style="background:#fff; font-weight: bold;">
       <th style="border: 1.5px solid #333; padding: 12px; width: 40px; text-align: center;">SR</th>
@@ -260,10 +260,10 @@ export default function EmailSettingsPage() {
         <td rowspan="{{RowSpan}}" style="border: 1.5px solid #333; padding: 12px; vertical-align: top;">
             <div style="font-weight: bold; margin-bottom: 5px;">
                {{Title}} 
-               <span style="color: #6D3BF7;">({{Project}})</span>
-               <span style="color: #3b82f6;">({{Status}})</span>
+               <span style="color: #2ecc71;">{{Project}}</span>
+               <span style="color: #3b82f6;">{{Status}}</span>
             </div>
-            <div style="font-size: 12px; color: #333;">
+            <div style="font-size: 14px; color: #333;">
                {{Description}}
             </div>
         </td>
