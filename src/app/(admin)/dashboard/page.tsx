@@ -59,7 +59,8 @@ export default function DashboardPage() {
     queryFn: async () => {
       const res = await dashboardService.getStats(selectedMonth, selectedYear);
       return res.data;
-    }
+    },
+    staleTime: 2 * 60 * 1000,
   });
 
   // Fetch Detailed Tasks - Only triggered when a status card is clicked
@@ -99,6 +100,7 @@ export default function DashboardPage() {
       const res = await menuService.getMenu(roleId, isTenant);
       return res.data || [];
     },
+    staleTime: 30 * 60 * 1000,
   });
 
   // Flatten menu to find sub-modules easily

@@ -30,6 +30,7 @@ body {
 }
 .hide-arrows {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 @layer components {
@@ -48,4 +49,21 @@ body {
   .input-field {
     @apply w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary transition-colors text-sm;
   }
+}
+
+/* 🚫 Drawer Scroll-Lock on HTML & Body */
+html.drawer-open,
+body.drawer-open {
+  overflow: hidden !important;
+  height: 100vh !important;
+  overscroll-behavior: none !important;
+}
+
+/* 🚫 Clean Hide Scrollbar Utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
 }

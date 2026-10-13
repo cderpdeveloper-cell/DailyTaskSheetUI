@@ -212,6 +212,11 @@ export default function EmailSettingsPage() {
             <div style="font-size: 13px; color: #333;">
                <span style="color: #3b82f6;">{{Team}}</span>
             </div>
+            {{#IsAiUsed}}
+            <div style="font-size: 13px; color: #292cbfff; margin-top: 2px;font-weight: 700;">
+               <span>AI: {{AiModel}}</span>
+            </div>
+            {{/IsAiUsed}}
         </td>
         <td style="border: 1.5px solid #333; padding: 12px; vertical-align: top;">
             <div style="color: #1e293b; font-size: 14px;">
@@ -263,6 +268,11 @@ export default function EmailSettingsPage() {
                <span style="color: #2ecc71;">{{Project}}</span>
                <span style="color: #3b82f6;">{{Status}}</span>
             </div>
+            {{#IsAiUsed}}
+            <div style="font-size: 13px; color: #292cbfff; margin-top: 2px; font-weight: 700;">
+               <span>AI: {{AiModel}}</span>
+            </div>
+            {{/IsAiUsed}}
             <div style="font-size: 14px; color: #333;">
                {{Description}}
             </div>
@@ -324,6 +334,8 @@ export default function EmailSettingsPage() {
     { label: 'Input Time', placeholder: '{{Time}}' },
     { label: 'Session Mode', placeholder: '{{Mode}}' },
     { label: 'Team Members', placeholder: '{{Team}}' },
+    { label: 'AI Used', placeholder: '{{IsAiUsed}}' },
+    { label: 'AI Model', placeholder: '{{AiModel}}' },
     { label: 'Description', placeholder: '{{Description}}' },
     { label: 'Status', placeholder: '{{StatusName}}' },
     { label: 'Desc + Status', placeholder: '{{DescriptionStatus}}' }
@@ -347,6 +359,8 @@ export default function EmailSettingsPage() {
     { label: 'End Once Only', placeholder: '{{/FirstLog}}' },
     { label: 'Start Other Logs', placeholder: '{{#OtherLogs}}' },
     { label: 'End Other Logs', placeholder: '{{/OtherLogs}}' },
+    { label: 'Start AI Only', placeholder: '{{#IsAiUsed}}' },
+    { label: 'End AI Only', placeholder: '{{/IsAiUsed}}' },
     { label: 'Row Span', placeholder: '{{RowSpan}}' },
     { label: 'Serial No', placeholder: '{{SrNo}}' }
   ];
@@ -649,6 +663,8 @@ export default function EmailSettingsPage() {
                         ?.replace(/{{Description}}/g, "• Task detail here...")
                         ?.replace(/{{DescriptionStatus}}/g, "• Task detail here... - Running")
                         ?.replace(/{{Status}}/g, "Running")
+                        ?.replace(/{{IsAiUsed}}/g, "Yes")
+                        ?.replace(/{{AiModel}}/g, "GPT-4o")
                         ?.replace(/{{TasksTable}}/g, "Table Preview...") || ""
                     }} />
                   </div>

@@ -24,10 +24,12 @@ import {
   X,
   Search,
   ChevronRight,
+  ChevronLeft,
   Eye,
   Settings,
   Coffee,
-  GripVertical
+  GripVertical,
+  Bot
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { Button } from "@/components/ui/Button";
@@ -57,6 +59,8 @@ interface FormWorkEntry {
   statusId: number;
   moduleId: number;
   description?: string;
+  isAiUsed?: boolean;
+  aiModel?: string | null;
   timeLogs: FormTimeLog[];
 }
 
@@ -79,11 +83,20 @@ const SearchableSelect = ({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
+  const recentIds = useMemo(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const json = localStorage.getItem("recent_projects_tasksheet");
+      return json ? JSON.parse(json) : [];
+    } catch {
+      return [];
+    }
+  }, [isOpen]);
+
+  const recentSet = useMemo(() => new Set(recentIds.map((id: number) => id.toString())), [recentIds]);
+
   const sortedOptions = useMemo(() => {
     let filtered = options.filter(opt => opt.name.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    const recentIdsJson = localStorage.getItem("recent_projects_tasksheet");
-    const recentIds: number[] = recentIdsJson ? JSON.parse(recentIdsJson) : [];
 
     if (sortMode === "recentLast" && recentIds.length > 0) {
       return [...filtered].sort((a, b) => {
@@ -105,7 +118,7 @@ const SearchableSelect = ({
       });
     }
     return filtered;
-  }, [options, searchTerm, sortMode]);
+  }, [options, searchTerm, sortMode, recentIds]);
 
   const selectedOption = options.find(opt => opt.id === value);
 
@@ -205,7 +218,7 @@ const SearchableSelect = ({
                 >
                   <div className="flex items-center justify-between">
                     <span>{opt.name}</span>
-                    {localStorage.getItem("recent_projects_tasksheet")?.includes(opt.id.toString()) && (
+                    {recentSet.has(opt.id.toString()) && (
                       <Zap className="w-2.5 h-2.5 text-orange-400 opacity-60" />
                     )}
                   </div>
@@ -263,11 +276,12 @@ export default function TaskSheetPage() {
     }
   }, [user?.defaultBreakDuration]);
 
-  // Queries
+  // Queries (with 15-minute cache for static master tables)
   const { data: projects = [] } = useQuery({
     queryKey: ["projects", companyId],
     queryFn: () => projectService.list(companyId),
     enabled: !!companyId,
+    staleTime: 15 * 60 * 1000,
     select: (res) => res.data || [],
   });
 
@@ -275,6 +289,7 @@ export default function TaskSheetPage() {
     queryKey: ["statuses", companyId],
     queryFn: () => statusService.list(companyId),
     enabled: !!companyId,
+    staleTime: 15 * 60 * 1000,
     select: (res) => res.data || [],
   });
 
@@ -282,6 +297,7 @@ export default function TaskSheetPage() {
     queryKey: ["modules", companyId],
     queryFn: () => moduleService.list(companyId),
     enabled: !!companyId,
+    staleTime: 15 * 60 * 1000,
     select: (res) => res.data || [],
   });
 
@@ -312,6 +328,7 @@ export default function TaskSheetPage() {
     queryKey: ["taskReports", employeeId],
     queryFn: () => taskSheetService.getReports(employeeId),
     enabled: !!employeeId,
+    staleTime: 60 * 1000,
     select: (res) => {
       const data = res.data.data || [];
       return [...data].sort((a, b) => new Date(b.reportDate).getTime() - new Date(a.reportDate).getTime());
@@ -322,6 +339,57 @@ export default function TaskSheetPage() {
     if (!activePreviewId) return null;
     return reports.find((r: any) => r.id === activePreviewId);
   }, [activePreviewId, reports]);
+
+  const [historyPage, setHistoryPage] = useState<number>(1);
+  const [historySearch, setHistorySearch] = useState<string>("");
+  const HISTORY_ITEMS_PER_PAGE = 3;
+
+  const historyListRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    historyListRef.current?.scrollTo({ top: 0, behavior: "instant" });
+  }, [historyPage]);
+
+  // Lock background body & html scrolling while history drawer is open to eliminate secondary scrollbar
+  React.useEffect(() => {
+    if (isHistoryModalOpen) {
+      document.documentElement.classList.add("drawer-open");
+      document.body.classList.add("drawer-open");
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+    } else {
+      document.documentElement.classList.remove("drawer-open");
+      document.body.classList.remove("drawer-open");
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.documentElement.classList.remove("drawer-open");
+      document.body.classList.remove("drawer-open");
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    };
+  }, [isHistoryModalOpen]);
+
+  const filteredReports = useMemo(() => {
+    if (!historySearch.trim()) return reports;
+    const q = historySearch.toLowerCase().trim();
+    return reports.filter((r: WorkReport) => {
+      const dateFormatted = new Date(r.reportDate).toLocaleDateString();
+      const dateIso = r.reportDate.toString();
+      return dateFormatted.toLowerCase().includes(q) || dateIso.includes(q);
+    });
+  }, [reports, historySearch]);
+
+  const totalHistoryPages = Math.ceil(filteredReports.length / HISTORY_ITEMS_PER_PAGE) || 1;
+
+  const paginatedReports = useMemo(() => {
+    const startIndex = (historyPage - 1) * HISTORY_ITEMS_PER_PAGE;
+    return filteredReports.slice(startIndex, startIndex + HISTORY_ITEMS_PER_PAGE);
+  }, [filteredReports, historyPage]);
+
+  React.useEffect(() => {
+    setHistoryPage(1);
+  }, [historySearch]);
 
   // Mutations
   const saveMutation = useMutation({
@@ -450,6 +518,8 @@ export default function TaskSheetPage() {
       statusId: statuses[0]?.statusId || 0,
       moduleId: modules[0]?.moduleId || 0,
       description: "",
+      isAiUsed: false,
+      aiModel: "",
       timeLogs: [{ inTime: "", outTime: "", is30MinBreak: false }]
     }, ...works]);
     setExpandedIndex(0);
@@ -548,6 +618,8 @@ export default function TaskSheetPage() {
         statusId: Number(w.statusId),
         moduleId: Number(w.moduleId),
         description: w.description,
+        isAiUsed: !!w.isAiUsed,
+        aiModel: w.isAiUsed ? (w.aiModel || "").trim() : null,
         timeLogs: w.timeLogs
       }))
     };
@@ -570,6 +642,8 @@ export default function TaskSheetPage() {
       statusId: w.statusId,
       moduleId: w.moduleId || (modules[0]?.moduleId || 0),
       description: w.description,
+      isAiUsed: !!w.isAiUsed,
+      aiModel: w.aiModel || "",
       timeLogs: w.timeLogs.map(l => ({
         inTime: l.inTime.substring(0, 5),
         outTime: l.outTime.substring(0, 5),
@@ -658,7 +732,7 @@ export default function TaskSheetPage() {
               <Calendar className="w-4 h-4 text-slate-500" />
               <input type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} className="bg-transparent border-none focus:ring-0 text-xs font-bold text-slate-700 outline-none uppercase" />
             </div>
-            <button onClick={() => setIsHistoryModalOpen(true)} className="h-10 px-4 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs flex items-center gap-2 hover:bg-slate-50 transition-all">
+            <button onClick={() => { setIsHistoryModalOpen(true); setHistoryPage(1); setHistorySearch(""); }} className="h-10 px-4 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs flex items-center gap-2 hover:bg-slate-50 transition-all">
               <History className="w-4 h-4" /> View Archive
             </button>
 
@@ -754,6 +828,14 @@ export default function TaskSheetPage() {
                         <span className="text-slate-500 italic">{projectName}</span>
                         <span className="text-slate-200">|</span>
                         <div className="flex items-center gap-1.5 text-slate-400 font-bold"><Clock className="w-3.5 h-3.5" /> {duration}</div>
+                        {work.isAiUsed && (
+                          <>
+                            <span className="text-slate-200">|</span>
+                            <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 border border-indigo-100">
+                              <Bot className="w-3 h-3 text-indigo-600" /> {work.aiModel || "AI Used"}
+                            </span>
+                          </>
+                        )}
                       </div>
                     ) : (
                       <h3 className="font-bold text-slate-700 text-sm italic tracking-tight">Main Entry Mapping (Session #{idx + 1})</h3>
@@ -811,6 +893,54 @@ export default function TaskSheetPage() {
                             placeholder="Select Status"
                           />
                         </div>
+                      </div>
+
+                      {/* AI Assistance Row - Slim & Compact */}
+                      <div className="p-2 px-3 bg-slate-50/70 border border-slate-200/70 rounded-lg flex flex-wrap items-center justify-between gap-3 min-h-[38px]">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={!!work.isAiUsed}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setWorks((prev) => {
+                                const next = [...prev];
+                                next[idx] = {
+                                  ...next[idx],
+                                  isAiUsed: checked,
+                                  aiModel: checked ? (next[idx].aiModel || "") : "",
+                                };
+                                return next;
+                              });
+                            }}
+                            className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+                          />
+                          <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                            <Bot className="w-3.5 h-3.5 text-indigo-500" />
+                            AI Used
+                          </span>
+                        </label>
+
+                        {work.isAiUsed && (
+                          <div className="flex items-center gap-2 flex-1 sm:max-w-xs animate-in fade-in duration-150">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                              AI Model:
+                            </span>
+                            <input
+                              className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
+                              placeholder="e.g. GPT-4o, Claude 3.5, Gemini"
+                              value={work.aiModel || ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setWorks((prev) => {
+                                  const next = [...prev];
+                                  next[idx] = { ...next[idx], aiModel: val };
+                                  return next;
+                                });
+                              }}
+                            />
+                          </div>
+                        )}
                       </div>
 
                       <div className="bg-white border border-slate-200 rounded-lg focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-50 transition-all flex flex-col h-48 overflow-hidden px-4 pt-3 pb-1">
@@ -874,22 +1004,49 @@ export default function TaskSheetPage() {
         </div>
       </div>
 
-      {/*  HISTORY DRAWER */}
+      {/* 🚀 HISTORY DRAWER */}
       {isHistoryModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-end">
+        <div className="fixed inset-0 z-[100] flex items-center justify-end overflow-hidden">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-none" onClick={() => setIsHistoryModalOpen(false)} />
-          <div className="relative w-full max-w-md h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="font-bold text-slate-800 underline decoration-blue-500 underline-offset-4 tracking-tight">Archive Explorer</h2>
-              <button onClick={() => setIsHistoryModalOpen(false)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-lg"><X className="w-5 h-5" /></button>
+          <div className="relative w-full max-w-md h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 overflow-hidden">
+            <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <h2 className="font-bold text-slate-800 underline decoration-blue-500 underline-offset-4 tracking-tight">Archive Explorer</h2>
+                <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full border border-blue-100">
+                  {filteredReports.length} {filteredReports.length === 1 ? 'Record' : 'Records'}
+                </span>
+              </div>
+              <button type="button" onClick={() => setIsHistoryModalOpen(false)} className="p-1.5 text-slate-400 hover:bg-slate-50 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              {reports.length === 0 ? (
-                <div className="text-center py-20 text-slate-300 text-sm italic uppercase tracking-[0.3em] font-light">NO RECORDS FOUND</div>
+
+            {/* 🔍 SEARCH / FILTER BAR */}
+            <div className="px-5 py-2.5 bg-slate-50/80 border-b border-slate-100">
+              <div className="relative flex items-center">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Filter by date (e.g. 10/10/2026)..."
+                  value={historySearch}
+                  onChange={(e) => setHistorySearch(e.target.value)}
+                  className="w-full pl-10 pr-9 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-slate-700 placeholder:text-slate-400 font-medium transition-all shadow-2xs"
+                />
+                {historySearch && (
+                  <button type="button" onClick={() => setHistorySearch("")} className="absolute right-3 p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div ref={historyListRef} className="flex-1 min-h-0 overflow-y-auto no-scrollbar p-3 space-y-2">
+              {filteredReports.length === 0 ? (
+                <div className="text-center py-20 text-slate-300 text-sm italic uppercase tracking-[0.3em] font-light">
+                  {historySearch ? "NO MATCHING RECORDS" : "NO RECORDS FOUND"}
+                </div>
               ) : (
-                <div className="space-y-4">
-                  {reports.map((report: WorkReport) => (
-                    <div key={report.id} className="p-5 border border-slate-200 rounded-xl hover:border-blue-300 transition-all space-y-5 shadow-sm hover:shadow-md bg-white group relative overflow-hidden">
+                <div className="space-y-2.5">
+                  {paginatedReports.map((report: WorkReport) => (
+                    <div key={report.id} className="p-3 border border-slate-200 rounded-xl hover:border-blue-300 transition-all space-y-2.5 shadow-xs hover:shadow-md bg-white group relative overflow-hidden">
                       {/* 📧 EMAIL STATUS INDICATOR */}
                       {report.isEmailSent && (
                         <div className="absolute top-0 right-0">
@@ -900,60 +1057,64 @@ export default function TaskSheetPage() {
                       )}
 
                       <div className="flex items-center justify-between">
-                        <div className="font-bold text-slate-700 text-sm flex items-center gap-3">
+                        <div className="font-bold text-slate-700 text-sm flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-blue-500" />
                           {new Date(report.reportDate).toLocaleDateString()}
-                          <span className="text-slate-300 mx-1">|</span>
+                          <span className="text-slate-300 mx-0.5">|</span>
                           <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-500 flex items-center gap-1">
                             <Clock className="w-3 h-3" /> {calculateReportTotalHours(report)}
                           </span>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-1.5">
                           {canEdit && (
-                            <button onClick={() => handleEditReport(report)} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all"><Pencil className="w-4 h-4" /></button>
+                            <button type="button" onClick={() => handleEditReport(report)} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all"><Pencil className="w-3.5 h-3.5" /></button>
                           )}
                           {canDelete && (
-                            <button onClick={() => {
+                            <button type="button" onClick={() => {
                               confirm({
                                 title: "Delete Report?",
                                 message: "Are you sure you want to delete this task report?",
                                 variant: "danger",
                                 onConfirm: () => deleteMutation.mutate(report.id)
                               });
-                            }} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all"><Trash2 className="w-4 h-4" /></button>
+                            }} className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
                           )}
                         </div>
                       </div>
-                      <div className="flex gap-2 pt-2">
+                      <div className="flex gap-2 pt-0.5">
                         <button
+                          type="button"
                           onClick={() => previewEmailMutation.mutate(report.id)}
                           disabled={previewEmailMutation.isPending}
-                          className="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                          className="flex-1 py-1.5 bg-slate-100 text-slate-700 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                         >
                           {previewEmailMutation.isPending && previewEmailMutation.variables === report.id ? (
                             <div className="w-3.5 h-3.5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
                           ) : (
-                            <Eye className="w-4 h-4 text-slate-500" />
+                            <Eye className="w-3.5 h-3.5 text-slate-500" />
                           )}
                           View Mail
                         </button>
                         {!report.isEmailSent && (
                           <button
+                            type="button"
                             onClick={() => {
                               confirm({
-                                title: "Dispatch Task Sheet?",
-                                message: "Would you like to send this task report via email to the configured recipients?",
+                                title: "Send Mail?",
+                                message: "Are you sure you want to send mail?",
+                                confirmText: "Send Mail",
+                                cancelText: "Cancel",
                                 variant: "primary",
                                 onConfirm: () => sendEmailMutation.mutate(report.id)
                               });
                             }}
                             disabled={sendEmailMutation.isPending}
-                            className="flex-1 py-2.5 bg-slate-800 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                            className="flex-1 py-1.5 bg-slate-800 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                           >
                             {sendEmailMutation.isPending && sendEmailMutation.variables === report.id ? (
                               <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                             ) : (
-                              <Mail className="w-4 h-4 text-blue-400" />
+                              <Mail className="w-3.5 h-3.5 text-blue-400" />
                             )}
                             Send Mail
                           </button>
@@ -964,6 +1125,66 @@ export default function TaskSheetPage() {
                 </div>
               )}
             </div>
+
+            {/* 📄 PAGINATION FOOTER */}
+            {filteredReports.length > 0 && (
+              <div className="px-5 py-2.5 border-t border-slate-100 bg-slate-50/80 backdrop-blur-sm flex items-center justify-between gap-2 select-none">
+                <div className="text-[11px] text-slate-500 font-medium">
+                  <span className="font-bold text-slate-700">
+                    {(historyPage - 1) * HISTORY_ITEMS_PER_PAGE + 1}
+                  </span>
+                  -
+                  <span className="font-bold text-slate-700">
+                    {Math.min(historyPage * HISTORY_ITEMS_PER_PAGE, filteredReports.length)}
+                  </span>
+                  {" of "}
+                  <span className="font-bold text-slate-700">{filteredReports.length}</span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                    disabled={historyPage === 1}
+                    className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    title="Previous Page"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalHistoryPages }, (_, i) => i + 1)
+                      .filter((p) => p === 1 || p === totalHistoryPages || Math.abs(p - historyPage) <= 1)
+                      .map((p, idx, arr) => {
+                        const prev = arr[idx - 1];
+                        const showEllipsis = prev && p - prev > 1;
+                        return (
+                          <React.Fragment key={p}>
+                            {showEllipsis && <span className="text-slate-400 text-xs px-0.5">...</span>}
+                            <button
+                              onClick={() => setHistoryPage(p)}
+                              className={`min-w-6.5 h-6.5 px-1.5 text-xs font-bold rounded-lg transition-all ${historyPage === p
+                                ? "bg-blue-600 text-white shadow-xs"
+                                : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                                }`}
+                            >
+                              {p}
+                            </button>
+                          </React.Fragment>
+                        );
+                      })}
+                  </div>
+
+                  <button
+                    onClick={() => setHistoryPage((p) => Math.min(totalHistoryPages, p + 1))}
+                    disabled={historyPage === totalHistoryPages}
+                    className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    title="Next Page"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -984,10 +1205,20 @@ export default function TaskSheetPage() {
             </button>
             {!activePreviewReport?.isEmailSent && (
               <button
+                type="button"
                 onClick={() => {
                   if (activePreviewId) {
-                    sendEmailMutation.mutate(activePreviewId);
-                    setIsPreviewOpen(false);
+                    confirm({
+                      title: "Send Mail?",
+                      message: "Are you sure you want to send mail?",
+                      confirmText: "Send Mail",
+                      cancelText: "Cancel",
+                      variant: "primary",
+                      onConfirm: () => {
+                        sendEmailMutation.mutate(activePreviewId);
+                        setIsPreviewOpen(false);
+                      }
+                    });
                   }
                 }}
                 disabled={sendEmailMutation.isPending}

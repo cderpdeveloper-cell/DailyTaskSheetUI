@@ -20,6 +20,8 @@ export interface WorkEntry {
     statusId: number;
     moduleId?: number;
     description: string;
+    isAiUsed?: boolean;
+    aiModel?: string | null;
     timeLogs: TimeLog[];
     project?: { projectId: number; projectName: string; projectColor?: string };
     status?: { statusId: number; statusName: string; statusColor?: string };
@@ -44,6 +46,8 @@ export interface SaveReportDTO {
         statusId: number;
         moduleId?: number;
         description?: string;
+        isAiUsed?: boolean;
+        aiModel?: string | null;
         timeLogs: { inTime: string; outTime: string; is30MinBreak: boolean }[];
     }[];
 }

@@ -27,6 +27,8 @@ export interface WorkLog {
     createDate: string;
     isEmailSent: boolean;
     emailSentDate?: string;
+    isAiUsed?: boolean;
+    aiModel?: string | null;
     client?: { clientId: number; clientName: string };
     project?: { projectId: number; projectName: string; projectColor?: string };
     tasks: WorkLogTask[];
@@ -41,6 +43,8 @@ export interface WorkLogCreateDTO {
     statusId: number;
     remarks?: string;
     otherEmployeeIds?: string;
+    isAiUsed?: boolean;
+    aiModel?: string | null;
     tasks: { description: string; statusId: number; isCompleted: boolean }[];
 }
 

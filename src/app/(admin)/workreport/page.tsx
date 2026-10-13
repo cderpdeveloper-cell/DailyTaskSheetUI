@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToastStore } from "@/store/useToastStore";
 import {
    Calendar, Plus, Trash2, Save, History, Clock, FileText, ChevronDown, Mail,
-   Users, Activity, Edit2, ArrowRight, X, Search, Briefcase, Zap, CheckCircle, ChevronUp, ChevronRight, Eye, GripVertical
+   Users, Activity, Edit2, ArrowRight, X, Search, Briefcase, Zap, CheckCircle, ChevronUp, ChevronRight, ChevronLeft, Eye, GripVertical, Bot
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { workLogService, WorkLogCreateDTO, WorkLog, WorkReportSessionDTO } from "@/services/api/workLog.service";
@@ -103,6 +103,33 @@ const SimpleSearchSelect = ({ label, options, value, onChange, placeholder, sort
    );
 };
 
+// --- Duration Calculation Helpers ---
+const parseLogMinutes = (log: { totalMinutes?: number; inputTime?: number | string }) => {
+   if (log.totalMinutes && Number(log.totalMinutes) > 0) {
+      return Number(log.totalMinutes);
+   }
+   const raw = Number(log.inputTime);
+   if (!raw || isNaN(raw) || raw <= 0) return 0;
+   const hrs = Math.floor(raw);
+   const dec = Math.round((raw - hrs) * 100);
+   if (dec < 60) {
+      return hrs * 60 + dec;
+   }
+   return Math.round(raw * 60);
+};
+
+const formatDurationDual = (totalMinutes: number) => {
+   const mins = Math.max(0, Math.round(totalMinutes));
+   const decimalHours = (mins / 60).toFixed(1);
+   const h = Math.floor(mins / 60);
+   const m = mins % 60;
+   return {
+      decimal: `${decimalHours}h`,
+      standard: `${h}h ${m}m`,
+      combined: `${decimalHours}h (${h}h ${m}m)`
+   };
+};
+
 export default function WorkReportPage() {
    const queryClient = useQueryClient();
    const { user } = useAuthStore();
@@ -117,7 +144,7 @@ export default function WorkReportPage() {
    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
    const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
    const [logs, setLogs] = useState<WorkLogCreateDTO[]>([
-      { clientId: 0, projectId: 0, workDate: selectedDate, inputTime: 0, mode: "AnyDesk", statusId: 0, otherEmployeeIds: "", tasks: [{ description: "", statusId: 0, isCompleted: false }] }
+      { clientId: 0, projectId: 0, workDate: selectedDate, inputTime: 0, mode: "AnyDesk", statusId: 0, otherEmployeeIds: "", isAiUsed: false, aiModel: "", tasks: [{ description: "", statusId: 0, isCompleted: false }] }
    ]);
    const [previewHtml, setPreviewHtml] = useState<string | null>(null);
    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -125,10 +152,10 @@ export default function WorkReportPage() {
    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
    const [dragEnabledIndex, setDragEnabledIndex] = useState<number | null>(null);
 
-   const { data: clientsRaw = [] } = useQuery({ queryKey: ["clientsList", companyId], queryFn: () => clientService.list(companyId), select: (res) => res.data || [] });
-   const { data: projectsRaw = [] } = useQuery({ queryKey: ["projectsList", companyId], queryFn: () => projectService.list(companyId), select: (res) => res.data || [] });
-   const { data: statuses = [] } = useQuery({ queryKey: ["statusesList", companyId], queryFn: () => statusService.list(companyId), select: (res) => res.data || [] });
-   const { data: history = [] } = useQuery({ queryKey: ["workLogs", employeeId], queryFn: () => workLogService.getLogs(employeeId), select: (res) => res.data.data || [] });
+   const { data: clientsRaw = [] } = useQuery({ queryKey: ["clientsList", companyId], queryFn: () => clientService.list(companyId), staleTime: 15 * 60 * 1000, select: (res) => res.data || [] });
+   const { data: projectsRaw = [] } = useQuery({ queryKey: ["projectsList", companyId], queryFn: () => projectService.list(companyId), staleTime: 15 * 60 * 1000, select: (res) => res.data || [] });
+   const { data: statuses = [] } = useQuery({ queryKey: ["statusesList", companyId], queryFn: () => statusService.list(companyId), staleTime: 15 * 60 * 1000, select: (res) => res.data || [] });
+   const { data: history = [] } = useQuery({ queryKey: ["workLogs", employeeId], queryFn: () => workLogService.getLogs(employeeId), staleTime: 60 * 1000, select: (res) => res.data.data || [] });
 
    const activePreviewReport = useMemo(() => {
       if (!activePreviewId) return null;
@@ -179,14 +206,88 @@ export default function WorkReportPage() {
       }
    }, [defaultStatusId]);
 
+   const currentDayMinutes = useMemo(() => {
+      return logs.reduce((acc, log) => acc + parseLogMinutes(log), 0);
+   }, [logs]);
+
+   const currentDayDurationDual = useMemo(() => {
+      return formatDurationDual(currentDayMinutes);
+   }, [currentDayMinutes]);
+
    const groupedHistory = useMemo(() => {
-      const map: any = {};
+      const map: Record<string, any> = {};
       history.forEach((h: WorkLog) => {
          const d = h.workDate.split('T')[0];
-         if (!map[d]) map[d] = h;
+         const logMins = parseLogMinutes(h);
+         if (!map[d]) {
+            map[d] = {
+               ...h,
+               totalMinutesSum: logMins,
+               allLogs: [h],
+               isEmailSent: h.isEmailSent
+            };
+         } else {
+            map[d].totalMinutesSum += logMins;
+            map[d].allLogs.push(h);
+            if (h.isEmailSent) map[d].isEmailSent = true;
+         }
       });
-      return Object.values(map).sort((a: any, b: any) => b.workDate.localeCompare(a.workDate));
+      return Object.values(map).map((group: any) => ({
+         ...group,
+         durationDual: formatDurationDual(group.totalMinutesSum)
+      })).sort((a: any, b: any) => b.workDate.localeCompare(a.workDate));
    }, [history]);
+
+   const [historyPage, setHistoryPage] = useState<number>(1);
+   const [historySearch, setHistorySearch] = useState<string>("");
+   const HISTORY_ITEMS_PER_PAGE = 3;
+
+   // Lock background window & body scrolling while history drawer is open to eliminate secondary scrollbar
+   useEffect(() => {
+      if (isHistoryOpen) {
+         document.documentElement.classList.add("drawer-open");
+         document.body.classList.add("drawer-open");
+         document.documentElement.style.overflow = "hidden";
+         document.body.style.overflow = "hidden";
+      } else {
+         document.documentElement.classList.remove("drawer-open");
+         document.body.classList.remove("drawer-open");
+         document.documentElement.style.overflow = "";
+         document.body.style.overflow = "";
+      }
+      return () => {
+         document.documentElement.classList.remove("drawer-open");
+         document.body.classList.remove("drawer-open");
+         document.documentElement.style.overflow = "";
+         document.body.style.overflow = "";
+      };
+   }, [isHistoryOpen]);
+
+   const filteredHistory = useMemo(() => {
+      if (!historySearch.trim()) return groupedHistory;
+      const q = historySearch.toLowerCase().trim();
+      return groupedHistory.filter((h: any) => {
+         const dateFormatted = new Date(h.workDate).toLocaleDateString('en-GB');
+         const dateIso = h.workDate.split('T')[0];
+         return dateFormatted.toLowerCase().includes(q) || dateIso.includes(q);
+      });
+   }, [groupedHistory, historySearch]);
+
+   const totalHistoryPages = Math.ceil(filteredHistory.length / HISTORY_ITEMS_PER_PAGE) || 1;
+
+   const paginatedHistory = useMemo(() => {
+      const startIndex = (historyPage - 1) * HISTORY_ITEMS_PER_PAGE;
+      return filteredHistory.slice(startIndex, startIndex + HISTORY_ITEMS_PER_PAGE);
+   }, [filteredHistory, historyPage]);
+
+   const historyListRef = useRef<HTMLDivElement>(null);
+   useEffect(() => {
+      historyListRef.current?.scrollTo({ top: 0, behavior: "instant" });
+   }, [historyPage]);
+
+   useEffect(() => {
+      setHistoryPage(1);
+   }, [historySearch]);
 
    // --- Handlers ---
    const addClientSession = () => {
@@ -207,7 +308,7 @@ export default function WorkReportPage() {
          if (salesProj) defaultProjectId = salesProj.id;
       }
 
-      setLogs([{ clientId: 0, projectId: defaultProjectId, workDate: selectedDate, inputTime: 0, mode: "AnyDesk", statusId: defaultStatusId, otherEmployeeIds: "", tasks: [{ description: "", statusId: defaultStatusId, isCompleted: false }] }, ...logs]);
+      setLogs([{ clientId: 0, projectId: defaultProjectId, workDate: selectedDate, inputTime: 0, mode: "AnyDesk", statusId: defaultStatusId, otherEmployeeIds: "", isAiUsed: false, aiModel: "", tasks: [{ description: "", statusId: defaultStatusId, isCompleted: false }] }, ...logs]);
       setExpandedIndex(0);
    };
 
@@ -325,16 +426,21 @@ export default function WorkReportPage() {
       const logsForDate = history.filter(h => h.workDate.split('T')[0] === date);
       if (logsForDate.length > 0) {
          setSelectedDate(date);
-         setLogs(logsForDate.map(h => ({
-            clientId: h.clientId,
-            projectId: h.projectId,
-            workDate: date,
-            inputTime: h.inputTime,
-            mode: h.mode,
-            statusId: h.statusId || defaultStatusId,
-            otherEmployeeIds: h.otherEmployeeIds || "",
-            tasks: h.tasks.map(t => ({ description: t.description, statusId: t.statusId, isCompleted: t.isCompleted }))
-         })));
+         setLogs(logsForDate.map(h => {
+            const isAi = !!h.isAiUsed || ((h.otherEmployeeIds || "").trim().toUpperCase() === "AI USED");
+            return {
+               clientId: h.clientId,
+               projectId: h.projectId,
+               workDate: date,
+               inputTime: h.inputTime,
+               mode: h.mode,
+               statusId: h.statusId || defaultStatusId,
+               otherEmployeeIds: h.otherEmployeeIds || "",
+               isAiUsed: isAi,
+               aiModel: h.aiModel || "",
+               tasks: h.tasks.map(t => ({ description: t.description, statusId: t.statusId, isCompleted: t.isCompleted }))
+            };
+         }));
          setExpandedIndex(0);
          setIsHistoryOpen(false);
          addToast("Log Loaded for Edit", "success");
@@ -350,22 +456,27 @@ export default function WorkReportPage() {
             const isBlankSession = logs.length === 1 && logs[0].clientId === 0;
 
             if (isDifferentDate || isBlankSession) {
-               setLogs(logsForDate.map(h => ({
-                  clientId: h.clientId,
-                  projectId: h.projectId,
-                  workDate: selectedDate,
-                  inputTime: h.inputTime,
-                  mode: h.mode,
-                  statusId: h.statusId || defaultStatusId,
-                  otherEmployeeIds: h.otherEmployeeIds || "",
-                  tasks: h.tasks.map(t => ({ description: t.description, statusId: t.statusId, isCompleted: t.isCompleted }))
-               })));
+               setLogs(logsForDate.map(h => {
+                  const isAi = !!h.isAiUsed || ((h.otherEmployeeIds || "").trim().toUpperCase() === "AI USED");
+                  return {
+                     clientId: h.clientId,
+                     projectId: h.projectId,
+                     workDate: selectedDate,
+                     inputTime: h.inputTime,
+                     mode: h.mode,
+                     statusId: h.statusId || defaultStatusId,
+                     otherEmployeeIds: h.otherEmployeeIds || "",
+                     isAiUsed: isAi,
+                     aiModel: h.aiModel || "",
+                     tasks: h.tasks.map(t => ({ description: t.description, statusId: t.statusId, isCompleted: t.isCompleted }))
+                  };
+               }));
                setExpandedIndex(0);
             }
          } else {
             // If no data for this date, but we are showing data from another date, reset to blank
             if (logs.length > 0 && logs[0].workDate !== selectedDate) {
-               setLogs([{ clientId: 0, projectId: 0, workDate: selectedDate, inputTime: 0, mode: "AnyDesk", statusId: defaultStatusId, otherEmployeeIds: "", tasks: [{ description: "", statusId: defaultStatusId, isCompleted: false }] }]);
+               setLogs([{ clientId: 0, projectId: 0, workDate: selectedDate, inputTime: 0, mode: "AnyDesk", statusId: defaultStatusId, otherEmployeeIds: "", isAiUsed: false, aiModel: "", tasks: [{ description: "", statusId: defaultStatusId, isCompleted: false }] }]);
                setExpandedIndex(0);
             }
          }
@@ -387,7 +498,15 @@ export default function WorkReportPage() {
       if (logs.some(l => !l.clientId || !l.projectId || l.tasks.some(t => !t.description))) {
          addToast("Required fields are missing.", "error"); return;
       }
-      sessionMutation.mutate({ workDate: selectedDate, logs: logs.map(l => ({ ...l, workDate: selectedDate })) });
+      sessionMutation.mutate({
+         workDate: selectedDate,
+         logs: logs.map(l => ({
+            ...l,
+            workDate: selectedDate,
+            isAiUsed: !!l.isAiUsed,
+            aiModel: l.isAiUsed ? (l.aiModel || "").trim() : null
+         }))
+      });
    };
 
    return (
@@ -406,7 +525,7 @@ export default function WorkReportPage() {
                      <Calendar className="w-4 h-4 text-slate-500" />
                      <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="bg-transparent border-none focus:ring-0 text-xs font-bold text-slate-700 outline-none uppercase" />
                   </div>
-                  <button onClick={() => setIsHistoryOpen(true)} className="h-10 px-4 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs flex items-center gap-2 hover:bg-slate-50 transition-all">
+                  <button onClick={() => { setIsHistoryOpen(true); setHistoryPage(1); setHistorySearch(""); }} className="h-10 px-4 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs flex items-center gap-2 hover:bg-slate-50 transition-all">
                      <History className="w-4 h-4" /> View Archive
                   </button>
                   <button onClick={handleSaveSession} disabled={sessionMutation.isPending || isCurrentDateSent} className={`h-10 px-6 rounded-lg font-bold text-xs flex items-center gap-2 transition-all ${isCurrentDateSent ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'}`}>
@@ -576,6 +695,48 @@ export default function WorkReportPage() {
                                           />
                                        </div>
                                     </div>
+
+                                    {/* AI Used Checkbox Card */}
+                                    <div className="p-3 bg-slate-50/50 border border-slate-200 rounded-xl space-y-1.5 flex flex-col justify-between">
+                                       <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">AI Assistance</label>
+                                       <label className="bg-white border border-slate-200 rounded-lg px-3 py-2 flex items-center gap-2.5 cursor-pointer hover:bg-slate-50 transition-colors">
+                                          <input
+                                             type="checkbox"
+                                             checked={!!log.isAiUsed}
+                                             onChange={(e) => {
+                                                const checked = e.target.checked;
+                                                setLogs((prev) => {
+                                                   const next = [...prev];
+                                                   next[logIdx] = {
+                                                      ...next[logIdx],
+                                                      isAiUsed: checked,
+                                                      aiModel: checked ? (next[logIdx].aiModel || '') : ''
+                                                   };
+                                                   return next;
+                                                });
+                                             }}
+                                             className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+                                          />
+                                          <span className="text-xs font-bold text-slate-700 select-none">AI Used</span>
+                                       </label>
+                                    </div>
+
+                                    {/* AI Model Card (displayed when AI Used is checked) */}
+                                    {log.isAiUsed ? (
+                                       <div className="p-3 bg-slate-50/50 border border-slate-200 rounded-xl space-y-1.5 animate-in fade-in duration-200">
+                                          <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">AI Model</label>
+                                          <div className="bg-white border border-slate-200 rounded-lg px-2 py-1.5">
+                                             <input
+                                                value={log.aiModel || ""}
+                                                onChange={(e) => updateClientDetail(logIdx, 'aiModel', e.target.value)}
+                                                placeholder="e.g. GPT-4o, Claude 3.5, Gemini"
+                                                className="w-full bg-transparent border-none text-sm font-bold text-slate-700 focus:ring-0 outline-none"
+                                             />
+                                          </div>
+                                       </div>
+                                    ) : (
+                                       <div className="hidden lg:block" />
+                                    )}
                                  </div>
                               </div>
 
@@ -629,86 +790,195 @@ export default function WorkReportPage() {
          {/* 🚀 HISTORY DRAWER - SIMPLE */}
          {
             isHistoryOpen && (
-               <div className="fixed inset-0 z-[100] flex items-center justify-end">
+               <div className="fixed inset-0 z-[100] flex items-center justify-end overflow-hidden">
                   <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-none" onClick={() => setIsHistoryOpen(false)} />
-                  <div className="relative w-full max-w-md h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-                     <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                        <h2 className="font-bold text-slate-800 underline decoration-blue-500 underline-offset-4">Audit Archive</h2>
-                        <button onClick={() => setIsHistoryOpen(false)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-lg"><X className="w-5 h-5" /></button>
+                  <div className="relative w-full max-w-md h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 overflow-hidden">
+                     <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                           <h2 className="font-bold text-slate-800 underline decoration-blue-500 underline-offset-4">Audit Archive</h2>
+                           <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full border border-blue-100">
+                              {filteredHistory.length} {filteredHistory.length === 1 ? 'Record' : 'Records'}
+                           </span>
+                        </div>
+                        <button type="button" onClick={() => setIsHistoryOpen(false)} className="p-1.5 text-slate-400 hover:bg-slate-50 rounded-lg"><X className="w-5 h-5" /></button>
                      </div>
-                     <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                        {groupedHistory.length === 0 ? <div className="text-center py-20 text-slate-300 text-sm italic uppercase tracking-[0.3em]">NO RECORDS FOUND</div> : groupedHistory.map((h: any) => (
-                           <div key={h.workLogId} className="p-5 border border-slate-200 rounded-lg hover:border-blue-300 transition-all space-y-4 shadow-sm hover:shadow-md relative overflow-hidden">
-                              {/* 📧 EMAIL STATUS INDICATOR */}
-                              {h.isEmailSent && (
-                                 <div className="absolute top-0 right-0">
-                                    <div className="bg-emerald-50 text-emerald-600 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter rounded-bl-lg border-l border-b border-emerald-100 flex items-center gap-1">
-                                       <CheckCircle className="w-2.5 h-2.5" /> Mail Dispatched
-                                    </div>
-                                 </div>
-                              )}
 
-                              <div className="flex items-center justify-between">
-                                 <div className="font-bold text-slate-700 text-sm flex items-center gap-3"><Calendar className="w-4 h-4 text-blue-500" /> {new Date(h.workDate).toLocaleDateString('en-GB')}</div>
-                                 <div className="flex gap-2">
-                                    {canEdit && !h.isEmailSent && (
-                                       <button onClick={() => loadSessionForEdit(h.workDate.split('T')[0])} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all"><Edit2 className="w-4 h-4" /></button>
+                     {/* 🔍 SEARCH / FILTER BAR */}
+                     <div className="px-5 py-2.5 bg-slate-50/80 border-b border-slate-100">
+                        <div className="relative flex items-center">
+                           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+                           <input
+                              type="text"
+                              placeholder="Filter by date (e.g. 10/10/2026)..."
+                              value={historySearch}
+                              onChange={(e) => setHistorySearch(e.target.value)}
+                              className="w-full pl-10 pr-9 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-slate-700 placeholder:text-slate-400 font-medium transition-all shadow-2xs"
+                           />
+                           {historySearch && (
+                              <button type="button" onClick={() => setHistorySearch("")} className="absolute right-3 p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors">
+                                 <X className="w-3.5 h-3.5" />
+                              </button>
+                           )}
+                        </div>
+                     </div>
+
+                     <div ref={historyListRef} className="flex-1 min-h-0 overflow-y-auto no-scrollbar p-3 space-y-2">
+                        {filteredHistory.length === 0 ? (
+                           <div className="text-center py-20 text-slate-300 text-sm italic uppercase tracking-[0.3em]">
+                              {historySearch ? "NO MATCHING RECORDS" : "NO RECORDS FOUND"}
+                           </div>
+                        ) : (
+                           paginatedHistory.map((h: any) => (
+                              <div key={h.workLogId} className="p-3 border border-slate-200 rounded-xl hover:border-blue-300 transition-all space-y-2.5 shadow-xs hover:shadow-md relative overflow-hidden bg-white">
+                                 {/* 📧 EMAIL STATUS INDICATOR */}
+                                 {h.isEmailSent && (
+                                    <div className="absolute top-0 right-0">
+                                       <div className="bg-emerald-50 text-emerald-600 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter rounded-bl-lg border-l border-b border-emerald-100 flex items-center gap-1">
+                                          <CheckCircle className="w-2.5 h-2.5" /> Mail Dispatched
+                                       </div>
+                                    </div>
+                                 )}
+
+                                 <div className="flex items-center justify-between">
+                                    <div className="font-bold text-slate-700 text-sm flex items-center gap-2">
+                                       <Calendar className="w-4 h-4 text-blue-500" />
+                                       <span>{new Date(h.workDate).toLocaleDateString('en-GB')}</span>
+                                       <span className="text-slate-300 mx-0.5">|</span>
+                                       <span
+                                          className="text-[11px] bg-slate-100 px-2 py-0.5 rounded-md text-slate-700 font-bold flex items-center gap-1 border border-slate-200/60 shadow-2xs"
+                                       >
+                                          <Clock className="w-3.5 h-3.5 text-blue-500" />
+                                          <span className="text-slate-400 font-medium text-[10px]">({h.durationDual?.standard || "0h 0m"})</span>
+                                       </span>
+                                    </div>
+                                    {!h.isEmailSent && (
+                                       <div className="flex gap-1.5">
+                                          {canEdit && (
+                                             <button type="button" onClick={() => loadSessionForEdit(h.workDate.split('T')[0])} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all" title="Edit Audit"><Edit2 className="w-3.5 h-3.5" /></button>
+                                          )}
+                                          {canDelete && (
+                                             <button
+                                                type="button"
+                                                onClick={() => {
+                                                   confirm({
+                                                      title: "Delete Audit?",
+                                                      message: "Are you sure you want to delete this daily audit permanently?",
+                                                      variant: "danger",
+                                                      onConfirm: () => deleteSessionMutation.mutate(h.workDate.split('T')[0])
+                                                   });
+                                                }}
+                                                className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all"
+                                                title="Delete Audit"
+                                             >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                             </button>
+                                          )}
+                                       </div>
                                     )}
-                                    {canDelete && !h.isEmailSent && (
+                                 </div>
+                                 <div className="flex gap-2 pt-0.5">
+                                    <button
+                                       type="button"
+                                       onClick={() => previewEmailMutation.mutate(h.workLogId)}
+                                       disabled={previewEmailMutation.isPending}
+                                       className="flex-1 py-1.5 bg-slate-100 text-slate-700 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                    >
+                                       {previewEmailMutation.isPending && previewEmailMutation.variables === h.workLogId ? (
+                                          <div className="w-3.5 h-3.5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+                                       ) : (
+                                          <Eye className="w-3.5 h-3.5 text-slate-500" />
+                                       )}
+                                       View Mail
+                                    </button>
+                                    {!h.isEmailSent && (
                                        <button
+                                          type="button"
                                           onClick={() => {
                                              confirm({
-                                                title: "Delete Audit?",
-                                                message: "Are you sure you want to delete this daily audit permanently?",
-                                                variant: "danger",
-                                                onConfirm: () => deleteSessionMutation.mutate(h.workDate.split('T')[0])
+                                                title: "Send Mail?",
+                                                message: "Are you sure you want to send mail?",
+                                                confirmText: "Send Mail",
+                                                cancelText: "Cancel",
+                                                variant: "primary",
+                                                onConfirm: () => sendEmailMutation.mutate(h.workLogId)
                                              });
                                           }}
-                                          className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all"
+                                          disabled={sendEmailMutation.isPending}
+                                          className="flex-1 py-1.5 bg-slate-800 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                                        >
-                                          <Trash2 className="w-4 h-4" />
+                                          {sendEmailMutation.isPending && sendEmailMutation.variables === h.workLogId ? (
+                                             <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                          ) : (
+                                             <Mail className="w-3.5 h-3.5 text-blue-400" />
+                                          )}
+                                          Send Mail
                                        </button>
                                     )}
                                  </div>
                               </div>
-                              <div className="flex gap-2 pt-2">
-                                 <button
-                                    onClick={() => previewEmailMutation.mutate(h.workLogId)}
-                                    disabled={previewEmailMutation.isPending}
-                                    className="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                                 >
-                                    {previewEmailMutation.isPending && previewEmailMutation.variables === h.workLogId ? (
-                                       <div className="w-3.5 h-3.5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
-                                    ) : (
-                                       <Eye className="w-4 h-4 text-slate-500" />
-                                    )}
-                                    View Mail
-                                 </button>
-                                 {!h.isEmailSent && (
-                                    <button
-                                       onClick={() => {
-                                          confirm({
-                                             title: "Dispatch Report?",
-                                             message: "Are you sure you want to send this work report via email now?",
-                                             variant: "primary",
-                                             onConfirm: () => sendEmailMutation.mutate(h.workLogId)
-                                          });
-                                       }}
-                                       disabled={sendEmailMutation.isPending}
-                                       className="flex-1 py-2.5 bg-slate-800 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                                    >
-                                       {sendEmailMutation.isPending && sendEmailMutation.variables === h.workLogId ? (
-                                          <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                                       ) : (
-                                          <Mail className="w-4 h-4 text-blue-400" />
-                                       )}
-                                       Send Mail
-                                    </button>
-                                 )}
-                              </div>
-                           </div>
-                        ))}
+                           ))
+                        )}
                      </div>
+
+                     {/* 📄 PAGINATION FOOTER */}
+                     {filteredHistory.length > 0 && (
+                        <div className="px-5 py-2.5 border-t border-slate-100 bg-slate-50/80 backdrop-blur-sm flex items-center justify-between gap-2 select-none">
+                           <div className="text-[11px] text-slate-500 font-medium">
+                              <span className="font-bold text-slate-700">
+                                 {(historyPage - 1) * HISTORY_ITEMS_PER_PAGE + 1}
+                              </span>
+                              -
+                              <span className="font-bold text-slate-700">
+                                 {Math.min(historyPage * HISTORY_ITEMS_PER_PAGE, filteredHistory.length)}
+                              </span>
+                              {" of "}
+                              <span className="font-bold text-slate-700">{filteredHistory.length}</span>
+                           </div>
+
+                           <div className="flex items-center gap-1.5">
+                              <button
+                                 onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                                 disabled={historyPage === 1}
+                                 className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                                 title="Previous Page"
+                              >
+                                 <ChevronLeft className="w-4 h-4" />
+                              </button>
+
+                              <div className="flex items-center gap-1">
+                                 {Array.from({ length: totalHistoryPages }, (_, i) => i + 1)
+                                    .filter((p) => p === 1 || p === totalHistoryPages || Math.abs(p - historyPage) <= 1)
+                                    .map((p, idx, arr) => {
+                                       const prev = arr[idx - 1];
+                                       const showEllipsis = prev && p - prev > 1;
+                                       return (
+                                          <React.Fragment key={p}>
+                                             {showEllipsis && <span className="text-slate-400 text-xs px-0.5">...</span>}
+                                             <button
+                                                onClick={() => setHistoryPage(p)}
+                                                className={`min-w-6.5 h-6.5 px-1.5 text-xs font-bold rounded-lg transition-all ${historyPage === p
+                                                   ? "bg-blue-600 text-white shadow-xs"
+                                                   : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                                                   }`}
+                                             >
+                                                {p}
+                                             </button>
+                                          </React.Fragment>
+                                       );
+                                    })}
+                              </div>
+
+                              <button
+                                 onClick={() => setHistoryPage((p) => Math.min(totalHistoryPages, p + 1))}
+                                 disabled={historyPage === totalHistoryPages}
+                                 className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                                 title="Next Page"
+                              >
+                                 <ChevronRight className="w-4 h-4" />
+                              </button>
+                           </div>
+                        </div>
+                     )}
                   </div>
                </div>
             )
@@ -730,10 +1000,20 @@ export default function WorkReportPage() {
                   </button>
                   {!activePreviewReport?.isEmailSent && (
                      <button
+                        type="button"
                         onClick={() => {
                            if (activePreviewId) {
-                              sendEmailMutation.mutate(activePreviewId);
-                              setIsPreviewOpen(false);
+                              confirm({
+                                 title: "Send Mail?",
+                                 message: "Are you sure you want to send mail?",
+                                 confirmText: "Send Mail",
+                                 cancelText: "Cancel",
+                                 variant: "primary",
+                                 onConfirm: () => {
+                                    sendEmailMutation.mutate(activePreviewId);
+                                    setIsPreviewOpen(false);
+                                 }
+                              });
                            }
                         }}
                         disabled={sendEmailMutation.isPending}

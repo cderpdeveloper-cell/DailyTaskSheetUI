@@ -20,7 +20,7 @@ export default function DashboardLayout({
 
   useEffect(() => {
     setIsLoaded(true);
-    
+
     // Fallback: check cookie if store is not yet ready
     const token = Cookies.get("accessToken");
     if (!isAuthenticated && !token) {
@@ -53,15 +53,15 @@ export default function DashboardLayout({
       <div className="md:pl-64 flex flex-col min-h-screen">
         <Navbar />
         <main className="p-6 flex-1">
-           <div className="max-w-6xl mx-auto space-y-6">
-                {children}
-           </div>
+          <div className="max-w-6xl mx-auto space-y-6">
+            {children}
+          </div>
         </main>
-        
+
         <footer className="px-8 py-6 border-t border-gray-100 bg-white/50 backdrop-blur-sm text-center">
-             <p className="text-xs text-gray-400 font-medium">
-                © 2026 DallyWorkReport. All rights reserved. Built with precision and modern technology.
-             </p>
+          <p className="text-xs text-gray-400 font-medium">
+            © 2026 DallyWorkReport. All rights reserved.
+          </p>
         </footer>
       </div>
       <Toaster richColors position="top-right" />
