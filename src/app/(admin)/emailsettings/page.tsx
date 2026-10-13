@@ -219,7 +219,7 @@ export default function EmailSettingsPage() {
             </div>
             {{/IsAiUsed}}
             {{^IsAiUsed}}
-            <div style="font-size: 13px; color: #64748b; margin-top: 2px; font-weight: 700;">
+            <div style="font-size: 13px; color: #292cbfff; margin-top: 2px; font-weight: 700;">
                <span>Did Not Use AI</span>
             </div>
             {{/IsAiUsed}}
@@ -280,7 +280,7 @@ export default function EmailSettingsPage() {
             </div>
             {{/IsAiUsed}}
             {{^IsAiUsed}}
-            <div style="font-size: 13px; color: #64748b; margin-top: 2px; font-weight: 700;">
+            <div style="font-size: 13px; color: #292cbfff; margin-top: 2px; font-weight: 700;">
                <span>Did Not Use AI</span>
             </div>
             {{/IsAiUsed}}
