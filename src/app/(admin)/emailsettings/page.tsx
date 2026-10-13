@@ -146,6 +146,7 @@ export default function EmailSettingsPage() {
     defaultValues: { recipientType: 'To', activeStatus: true }
   });
   const templateForm = useForm<TemplateFormValues>({ resolver: zodResolver(templateSchema) });
+  const [previewAiUsed, setPreviewAiUsed] = useState(false);
 
   // Populate SMTP form
   useEffect(() => {
@@ -217,6 +218,11 @@ export default function EmailSettingsPage() {
                <span>AI: {{AiModel}}</span>
             </div>
             {{/IsAiUsed}}
+            {{^IsAiUsed}}
+            <div style="font-size: 13px; color: #64748b; margin-top: 2px; font-weight: 700;">
+               <span>Did Not Use AI</span>
+            </div>
+            {{/IsAiUsed}}
         </td>
         <td style="border: 1.5px solid #333; padding: 12px; vertical-align: top;">
             <div style="color: #1e293b; font-size: 14px;">
@@ -271,6 +277,11 @@ export default function EmailSettingsPage() {
             {{#IsAiUsed}}
             <div style="font-size: 13px; color: #292cbfff; margin-top: 2px; font-weight: 700;">
                <span>AI: {{AiModel}}</span>
+            </div>
+            {{/IsAiUsed}}
+            {{^IsAiUsed}}
+            <div style="font-size: 13px; color: #64748b; margin-top: 2px; font-weight: 700;">
+               <span>Did Not Use AI</span>
             </div>
             {{/IsAiUsed}}
             <div style="font-size: 14px; color: #333;">
@@ -349,6 +360,8 @@ export default function EmailSettingsPage() {
     { label: 'Start Time', placeholder: '{{StartTime}}' },
     { label: 'End Time', placeholder: '{{EndTime}}' },
     { label: 'Duration', placeholder: '{{Duration}}' },
+    { label: 'AI Used', placeholder: '{{IsAiUsed}}' },
+    { label: 'AI Model', placeholder: '{{AiModel}}' },
     { label: 'Desc + Status', placeholder: '{{DescriptionStatus}}' }
   ];
 
@@ -361,6 +374,8 @@ export default function EmailSettingsPage() {
     { label: 'End Other Logs', placeholder: '{{/OtherLogs}}' },
     { label: 'Start AI Only', placeholder: '{{#IsAiUsed}}' },
     { label: 'End AI Only', placeholder: '{{/IsAiUsed}}' },
+    { label: 'Start Not AI Only', placeholder: '{{^IsAiUsed}}' },
+    { label: 'End Not AI Only', placeholder: '{{/IsAiUsed}}' },
     { label: 'Row Span', placeholder: '{{RowSpan}}' },
     { label: 'Serial No', placeholder: '{{SrNo}}' }
   ];
@@ -644,8 +659,24 @@ export default function EmailSettingsPage() {
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[400px]">
-              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
+              <div className="px-6 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                 <h3 className="font-bold text-slate-800 text-[10px] uppercase tracking-widest">Live Output</h3>
+                <div className="flex items-center gap-1.5 bg-slate-200/60 p-0.5 rounded-lg text-[10px] font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewAiUsed(false)}
+                    className={`px-2 py-0.5 rounded-md transition-all ${!previewAiUsed ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    Did Not Use AI
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewAiUsed(true)}
+                    className={`px-2 py-0.5 rounded-md transition-all ${previewAiUsed ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    AI Used
+                  </button>
+                </div>
               </div>
               <div className="p-4 flex-1 bg-slate-100/30 overflow-auto">
                 <div className="bg-white shadow-sm rounded-lg mx-auto w-full border border-slate-100 overflow-hidden">
@@ -654,18 +685,55 @@ export default function EmailSettingsPage() {
                   </div>
                   <div className="p-6">
                     <div className="transform scale-[0.8] origin-top" dangerouslySetInnerHTML={{
-                      __html: templateForm.watch("bodyHtml")
-                        ?.replace(/{{Date}}/g, "30/03/2026")
-                        ?.replace(/{{ClientName}}/g, "Client Name")
-                        ?.replace(/{{ProjectName}}/g, "Project Name")
-                        ?.replace(/{{Time}}/g, "2.5")
-                        ?.replace(/{{StatusName}}/g, "Running")
-                        ?.replace(/{{Description}}/g, "• Task detail here...")
-                        ?.replace(/{{DescriptionStatus}}/g, "• Task detail here... - Running")
-                        ?.replace(/{{Status}}/g, "Running")
-                        ?.replace(/{{IsAiUsed}}/g, "Yes")
-                        ?.replace(/{{AiModel}}/g, "GPT-4o")
-                        ?.replace(/{{TasksTable}}/g, "Table Preview...") || ""
+                      __html: (() => {
+                        let raw = templateForm.watch("bodyHtml") || "";
+                        const hasNegativeAi = raw.includes("{{^IsAiUsed}}") || raw.includes("{{#NotAiUsed}}");
+
+                        if (previewAiUsed) {
+                          raw = raw
+                            .replace(/{{#IsAiUsed}}([\s\S]*?){{\/IsAiUsed}}/g, "$1")
+                            .replace(/{{(\^|#Not)IsAiUsed}}[\s\S]*?{{\/IsAiUsed}}/g, "")
+                            .replace(/{{#AiModel}}([\s\S]*?){{\/AiModel}}/g, "$1")
+                            .replace(/{{IsAiUsed}}/g, "Yes")
+                            .replace(/{{AiModel}}/g, "GPT-4o");
+                        } else {
+                          if (hasNegativeAi) {
+                            raw = raw
+                              .replace(/{{#IsAiUsed}}[\s\S]*?{{\/IsAiUsed}}/g, "")
+                              .replace(/{{(\^|#Not)IsAiUsed}}([\s\S]*?){{\/IsAiUsed}}/g, "$1");
+                          } else {
+                            raw = raw.replace(
+                              /{{#IsAiUsed}}[\s\S]*?{{\/IsAiUsed}}/g,
+                              '<div style="font-size: 13px; color: #292cbfff; margin-top: 2px; font-weight: 700;"><span>Did Not Use AI</span></div>'
+                            );
+                          }
+                          raw = raw
+                            .replace(/{{#AiModel}}[\s\S]*?{{\/AiModel}}/g, "")
+                            .replace(/{{IsAiUsed}}/g, "Did Not Use AI")
+                            .replace(/{{AiModel}}/g, "Did Not Use AI");
+                        }
+
+                        return raw
+                          .replace(/{{Date}}/g, "30/03/2026")
+                          .replace(/{{ClientName}}/g, "Client Name")
+                          .replace(/{{ProjectName}}/g, "Project Name")
+                          .replace(/{{Time}}/g, "2.5")
+                          .replace(/{{StatusName}}/g, "Running")
+                          .replace(/{{Description}}/g, "• Task detail here...")
+                          .replace(/{{DescriptionStatus}}/g, "• Task detail here... - Running")
+                          .replace(/{{Status}}/g, "Running")
+                          .replace(/{{Title}}/g, "Project Task")
+                          .replace(/{{Project}}/g, "Project Name")
+                          .replace(/{{StartTime}}/g, "09:00")
+                          .replace(/{{EndTime}}/g, "11:30")
+                          .replace(/{{Duration}}/g, "2:30")
+                          .replace(/{{RowSpan}}/g, "1")
+                          .replace(/{{SrNo}}/g, "1")
+                          .replace(/{{Team}}/g, "Team Member")
+                          .replace(/{{Mode}}/g, "AnyDesk")
+                          .replace(/{{#Rows}}|{{\/Rows}}|{{#FirstLog}}|{{\/FirstLog}}|{{#OtherLogs}}|{{\/OtherLogs}}|{{#OtherEmployeeIds}}|{{\/OtherEmployeeIds}}|{{#Team}}|{{\/Team}}/g, "")
+                          .replace(/{{TasksTable}}/g, "Table Preview...");
+                      })()
                     }} />
                   </div>
                 </div>
