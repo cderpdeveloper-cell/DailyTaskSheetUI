@@ -1503,7 +1503,7 @@ export default function TaskSheetPage() {
             >
               Close
             </button>
-            {!activePreviewReport?.isEmailSent && (
+            {isEmailServiceActive && !activePreviewReport?.isEmailSent && (
               <button
                 type="button"
                 onClick={() => {
