@@ -16,6 +16,7 @@ import { emailSettingsService } from "@/services/api/emailSettings.service";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useConfirmStore } from "@/store/useConfirmStore";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { getLocalDateString } from "@/utils/dateUtils";
 
 // --- Clean Search Select Component ---
 
@@ -141,7 +142,7 @@ export default function WorkReportPage() {
 
    const { canCreate, canEdit, canDelete } = usePagePermissions("workreport");
 
-   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+   const [selectedDate, setSelectedDate] = useState(getLocalDateString());
    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
    const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
    const [logs, setLogs] = useState<WorkLogCreateDTO[]>([

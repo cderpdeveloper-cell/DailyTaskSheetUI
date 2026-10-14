@@ -32,6 +32,7 @@ import {
   Bot
 } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { getLocalDateString } from "@/utils/dateUtils";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Table } from "@/components/ui/Table";
@@ -243,7 +244,7 @@ export default function TaskSheetPage() {
 
   const { canCreate, canEdit, canDelete } = usePagePermissions("dailytasksheet");
 
-  const [reportDate, setReportDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [reportDate, setReportDate] = useState<string>(getLocalDateString());
   const [works, setWorks] = useState<FormWorkEntry[]>([]);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [editingReportId, setEditingReportId] = useState<number | null>(null);
