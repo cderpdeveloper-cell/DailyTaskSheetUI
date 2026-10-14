@@ -18,10 +18,10 @@ export const authService = {
     return response.data;
   },
 
-  refreshToken: async (token: string, refreshToken: string): Promise<ApiResponse<any>> => {
-    const response = await axiosInstance.post<ApiResponse<any>>(
-      "/Auth/RefreshToken",
-      { token, refreshToken }
+  refreshToken: async (accessToken: string, refreshToken: string): Promise<ApiResponse<AuthResponse>> => {
+    const response = await axiosInstance.post<ApiResponse<AuthResponse>>(
+      "/Auth/Refresh",
+      { accessToken, refreshToken }
     );
     return response.data;
   }

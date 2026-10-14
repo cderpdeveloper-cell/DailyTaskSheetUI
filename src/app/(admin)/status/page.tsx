@@ -19,18 +19,19 @@ import { Modal } from "@/components/ui/Modal";
 import { statusService, Status } from "@/services/api/status.service";
 import { useAuthStore } from "@/store/useAuthStore";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { useConfirmStore } from "@/store/useConfirmStore";
 import { toast } from "sonner";
 
 const getErrorMessage = (err: any) => {
     if (err.response?.data?.errors) {
         return Object.values(err.response.data.errors).flat().join(", ");
     }
-    return err.response?.data?.message || err.message || "An unexpected error occurred";
+    return err.response?.data?.message || err.message || "An unexpected error occurred. Please try again.";
 };
 
 const statusSchema = z.object({
-  statusName: z.string().min(2, "Status Name is required"),
-  statusColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, "Please select a valid color"),
+  statusName: z.string().min(2, "Status name is required."),
+  statusColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, "Please select a valid color."),
 });
 
 type StatusFormValues = z.infer<typeof statusSchema>;
@@ -41,6 +42,7 @@ export default function StatusMasterPage() {
   const companyId = user?.companyId || 1;
 
   const { canCreate, canEdit, canDelete } = usePagePermissions("statusmaster");
+  const confirm = useConfirmStore((state) => state.confirm);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStatus, setEditingStatus] = useState<Status | null>(null);
@@ -77,7 +79,7 @@ export default function StatusMasterPage() {
       setIsModalOpen(false);
       reset();
       setEditingStatus(null);
-      toast.success(res.message || (editingStatus ? "Status updated successfully!" : "Status created successfully!"));
+      toast.success(res.message || (editingStatus ? "Status updated successfully." : "Status created successfully."));
     },
     onError: (err: any) => {
         toast.error(getErrorMessage(err));
@@ -88,7 +90,7 @@ export default function StatusMasterPage() {
     mutationFn: (id: number) => statusService.delete(id),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["statuses", companyId] });
-      toast.success(res.message || "Status deleted successfully!");
+      toast.success(res.message || "Status deleted successfully.");
     },
     onError: (err: any) => {
         toast.error(getErrorMessage(err));
@@ -172,7 +174,16 @@ export default function StatusMasterPage() {
                     </button>
                   )}
                   {canDelete && (
-                    <button onClick={() => deleteMutation.mutate(status.statusId)} className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors">
+                    <button onClick={() => {
+                      confirm({
+                        title: "Delete Status?",
+                        message: `Are you sure you want to delete ${status.statusName}? This action cannot be undone.`,
+                        confirmText: "Delete",
+                        cancelText: "Cancel",
+                        variant: "danger",
+                        onConfirm: () => deleteMutation.mutate(status.statusId)
+                      });
+                    }} className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}

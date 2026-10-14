@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { AlertCircle, Trash2, X } from "lucide-react";
+import React, { useEffect, useCallback } from "react";
+import { AlertCircle, Trash2 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { useConfirmStore } from "@/store/useConfirmStore";
 import { Button } from "./Button";
@@ -9,17 +9,48 @@ import { Button } from "./Button";
 export const ConfirmDialog = () => {
   const { isOpen, options, close } = useConfirmStore();
 
+  const handleConfirm = useCallback(() => {
+    if (options?.onConfirm) options.onConfirm();
+    close();
+  }, [options, close]);
+
+  const handleCancel = useCallback(() => {
+    if (options?.onCancel) options.onCancel();
+    close();
+  }, [options, close]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // ESC closes/cancels
+      if (e.key === "Escape" || e.key === "Esc" || e.keyCode === 27) {
+        e.stopPropagation();
+        e.preventDefault();
+        handleCancel();
+        return;
+      }
+
+      // ENTER confirms
+      if (e.key === "Enter" || e.keyCode === 13) {
+        e.stopPropagation();
+        e.preventDefault();
+        handleConfirm();
+        return;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, [isOpen, handleCancel, handleConfirm]);
+
   if (!isOpen || !options) return null;
-
-  const handleConfirm = () => {
-    options.onConfirm();
-    close();
-  };
-
-  const handleCancel = () => {
-    if (options.onCancel) options.onCancel();
-    close();
-  };
 
   const isDanger = options.variant === "danger";
 
@@ -57,9 +88,10 @@ export const ConfirmDialog = () => {
               {options.cancelText || "Cancel"}
             </Button>
             <Button 
+              autoFocus
               variant={isDanger ? "danger" : "primary"}
               onClick={handleConfirm}
-              className="flex-1"
+              className="flex-1 shadow-sm"
             >
               {options.confirmText || (isDanger ? "Delete" : "Confirm")}
             </Button>

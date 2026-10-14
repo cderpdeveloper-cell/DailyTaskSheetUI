@@ -20,18 +20,19 @@ import { Modal } from "@/components/ui/Modal";
 import { clientService, Client } from "@/services/api/client.service";
 import { useAuthStore } from "@/store/useAuthStore";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { useConfirmStore } from "@/store/useConfirmStore";
 import { toast } from "sonner";
 
 const getErrorMessage = (err: any) => {
   if (err.response?.data?.errors) {
     return Object.values(err.response.data.errors).flat().join(", ");
   }
-  return err.response?.data?.message || err.message || "An unexpected error occurred";
+  return err.response?.data?.message || err.message || "An unexpected error occurred. Please try again.";
 };
 
 const clientSchema = z.object({
-  clientName: z.string().min(1, "Client Name is required"),
-  clientShortCode: z.string().min(1, "Client Short Code is required"),
+  clientName: z.string().min(1, "Client name is required."),
+  clientShortCode: z.string().min(1, "Client short code is required."),
 });
 
 type ClientFormValues = z.infer<typeof clientSchema>;
@@ -42,6 +43,7 @@ export default function ClientMasterPage() {
   const companyId = user?.companyId || 1;
 
   const { canCreate, canEdit, canDelete } = usePagePermissions("clientmaster");
+  const confirm = useConfirmStore((state) => state.confirm);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -72,7 +74,7 @@ export default function ClientMasterPage() {
       setIsModalOpen(false);
       reset();
       setEditingClient(null);
-      toast.success(res.message || (editingClient ? "Client updated successfully!" : "Client created successfully!"));
+      toast.success(res.message || (editingClient ? "Client updated successfully." : "Client created successfully."));
     },
     onError: (err: any) => {
       toast.error(getErrorMessage(err));
@@ -83,7 +85,7 @@ export default function ClientMasterPage() {
     mutationFn: (id: number) => clientService.delete(id),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["clients", companyId] });
-      toast.success(res.message || "Client deleted successfully!");
+      toast.success(res.message || "Client deleted successfully.");
     },
     onError: (err: any) => {
       toast.error(getErrorMessage(err));
@@ -165,7 +167,16 @@ export default function ClientMasterPage() {
                       </button>
                     )}
                     {canDelete && (
-                      <button onClick={() => deleteMutation.mutate(client.clientId)} className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors">
+                      <button onClick={() => {
+                        confirm({
+                          title: "Delete Client?",
+                          message: `Are you sure you want to delete ${client.clientName}? This action cannot be undone.`,
+                          confirmText: "Delete",
+                          cancelText: "Cancel",
+                          variant: "danger",
+                          onConfirm: () => deleteMutation.mutate(client.clientId)
+                        });
+                      }} className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     )}

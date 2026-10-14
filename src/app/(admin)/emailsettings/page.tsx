@@ -26,25 +26,25 @@ import { MenuItem } from "@/types/api.types";
 
 // Zod Schemas
 const smtpSchema = z.object({
-  smtpServer: z.string().min(2, "SMTP Server is required"),
-  port: z.coerce.number().min(1, "Port is required"),
-  senderName: z.string().min(2, "Sender Name is required"),
-  senderEmail: z.string().email("Invalid email address"),
-  password: z.string().min(1, "Password is required"),
+  smtpServer: z.string().min(2, "SMTP server is required."),
+  port: z.coerce.number().min(1, "Port is required."),
+  senderName: z.string().min(2, "Sender name is required."),
+  senderEmail: z.string().email("Please enter a valid email address."),
+  password: z.string().min(1, "Password is required."),
   activeStatus: z.boolean().default(true),
 });
 
 const recipientSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: z.string().email("Please enter a valid email address."),
   name: z.string().optional(),
-  recipientType: z.string().min(1, "Type is required"),
+  recipientType: z.string().min(1, "Recipient type is required."),
   activeStatus: z.boolean().default(true),
 });
 
 const templateSchema = z.object({
-  templateName: z.string().min(1, "Template name is required"),
-  subjectFormat: z.string().min(1, "Subject format is required"),
-  bodyHtml: z.string().min(10, "Template content is too short"),
+  templateName: z.string().min(1, "Template name is required."),
+  subjectFormat: z.string().min(1, "Subject format is required."),
+  bodyHtml: z.string().min(10, "Template content is too short."),
   tableConfigJson: z.string().optional(),
 });
 
@@ -56,7 +56,7 @@ const getErrorMessage = (err: any) => {
   if (err.response?.data?.errors) {
     return Object.values(err.response.data.errors).flat().join(", ");
   }
-  return err.response?.data?.message || err.message || "An unexpected error occurred";
+  return err.response?.data?.message || err.message || "An unexpected error occurred. Please try again.";
 };
 
 export default function EmailSettingsPage() {
@@ -168,7 +168,7 @@ export default function EmailSettingsPage() {
       emailSettingsService.saveSmtpSettings({ ...data, employeeId, emailSettingsId: smtpData?.emailSettingsId || 0 }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["smtpSettings", employeeId] });
-      toast.success(res.data.message || "SMTP settings updated!");
+      toast.success(res.data.message || "SMTP settings updated successfully.");
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
@@ -180,7 +180,7 @@ export default function EmailSettingsPage() {
       queryClient.invalidateQueries({ queryKey: ["emailRecipients", employeeId] });
       setIsRecipientModalOpen(false);
       recipientForm.reset();
-      toast.success(res.data.message || "Recipient added!");
+      toast.success(res.data.message || "Email recipient added successfully.");
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
@@ -315,7 +315,7 @@ export default function EmailSettingsPage() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mailTemplate", companyId, employeeId] });
-      toast.success("Personal template saved successfully!");
+      toast.success("Email template saved successfully.");
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
@@ -383,7 +383,7 @@ export default function EmailSettingsPage() {
   const insertPlaceholder = (placeholder: string) => {
     const current = templateForm.getValues("bodyHtml");
     templateForm.setValue("bodyHtml", current + placeholder);
-    toast.info(`Inserted ${placeholder}`);
+    toast.info(`Inserted ${placeholder} into template.`);
   };
 
   const columns = [
@@ -433,14 +433,15 @@ export default function EmailSettingsPage() {
               <button
                 onClick={() => {
                   confirm({
-                    title: "Remove Recipient?",
-                    message: `Are you sure you want to remove ${item.email}? They will no longer receive automated reports.`,
+                    title: "Remove Email Recipient?",
+                    message: `Are you sure you want to remove ${item.email}? This action cannot be undone.`,
                     variant: "danger",
-                    confirmText: "Remove Now",
+                    confirmText: "Delete",
+                    cancelText: "Cancel",
                     onConfirm: () => {
                       emailSettingsService.deleteRecipient(item.id).then(() => {
                         queryClient.invalidateQueries({ queryKey: ["emailRecipients", employeeId] });
-                        toast.success("Recipient removed successfully");
+                        toast.success("Email recipient removed successfully.");
                       });
                     }
                   });

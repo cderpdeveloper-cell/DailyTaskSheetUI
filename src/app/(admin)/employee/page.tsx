@@ -37,19 +37,19 @@ const getErrorMessage = (err: any) => {
     if (err.response?.data?.errors) {
         return Object.values(err.response.data.errors).flat().join(", ");
     }
-    return err.response?.data?.message || err.message || "An unexpected error occurred";
+    return err.response?.data?.message || err.message || "An unexpected error occurred. Please try again.";
 };
 
 const employeeSchema = z.object({
-  employeeCode: z.coerce.number().min(1, "Code is required"),
-  firstName: z.string().min(2, "First name is required"),
+  employeeCode: z.coerce.number().min(1, "Employee code is required."),
+  firstName: z.string().min(2, "First name is required."),
   middleName: z.string().optional(),
-  lastName: z.string().min(2, "Last name is required"),
-  email: z.string().email("Invalid email address").optional().or(z.literal("")),
+  lastName: z.string().min(2, "Last name is required."),
+  email: z.string().email("Please enter a valid email address.").optional().or(z.literal("")),
   mobileNo: z.string().optional(),
-  roleMasterId: z.coerce.number().min(1, "Role is required"),
-  genderId: z.coerce.number().min(1, "Gender is required"),
-  passwords: z.string().min(6, "Password must be at least 6 characters"),
+  roleMasterId: z.coerce.number().min(1, "Role is required."),
+  genderId: z.coerce.number().min(1, "Gender is required."),
+  passwords: z.string().min(6, "Password must be at least 6 characters."),
   isAllowLogin: z.boolean().default(true),
 });
 
@@ -96,7 +96,7 @@ export default function EmployeeMasterPage() {
     mutationFn: (id: number) => employeeService.delete(id),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["employees", companyId] });
-      toast.success(res.message || "Employee deleted successfully");
+      toast.success(res.message || "Employee deleted successfully.");
     },
     onError: (err: any) => {
       toast.error(getErrorMessage(err));
@@ -121,7 +121,7 @@ export default function EmployeeMasterPage() {
       setIsModalOpen(false);
       reset();
       setEditingEmployee(null);
-      toast.success(res.message || (editingEmployee ? "Updated successfully" : "Created successfully"));
+      toast.success(res.message || (editingEmployee ? "Employee updated successfully." : "Employee created successfully."));
     },
     onError: (err: any) => {
         toast.error(getErrorMessage(err));
@@ -186,10 +186,11 @@ export default function EmployeeMasterPage() {
 
   const handleDelete = (id: number) => {
     confirm({
-        title: "Delete Account?",
-        message: "Are you sure you want to delete this employee? This action cannot be undone and will disable their dashboard access.",
+        title: "Delete Employee?",
+        message: "Are you sure you want to delete this employee? This action cannot be undone.",
         variant: "danger",
-        confirmText: "Delete Account",
+        confirmText: "Delete",
+        cancelText: "Cancel",
         onConfirm: () => deleteMutation.mutate(id)
     });
   };

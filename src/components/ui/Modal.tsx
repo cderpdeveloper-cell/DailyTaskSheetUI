@@ -29,17 +29,24 @@ export const Modal = ({
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" || e.key === "Esc" || e.keyCode === 27) {
+        e.stopPropagation();
+        e.preventDefault();
+        onClose();
+      }
     };
 
     if (isOpen) {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
       document.body.style.overflow = "hidden";
-      window.addEventListener("keydown", handleEscape);
+      window.addEventListener("keydown", handleEscape, true);
     }
 
     return () => {
       document.body.style.overflow = "unset";
-      window.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("keydown", handleEscape, true);
     };
   }, [isOpen, onClose]);
 

@@ -22,18 +22,19 @@ import { Modal } from "@/components/ui/Modal";
 import { projectService, Project } from "@/services/api/project.service";
 import { useAuthStore } from "@/store/useAuthStore";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { useConfirmStore } from "@/store/useConfirmStore";
 import { toast } from "sonner";
 
 const getErrorMessage = (err: any) => {
     if (err.response?.data?.errors) {
         return Object.values(err.response.data.errors).flat().join(", ");
     }
-    return err.response?.data?.message || err.message || "An unexpected error occurred";
+    return err.response?.data?.message || err.message || "An unexpected error occurred. Please try again.";
 };
 
 const projectSchema = z.object({
-  projectName: z.string().min(2, "Project Name is required"),
-  projectColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, "Please select a valid color"),
+  projectName: z.string().min(2, "Project name is required."),
+  projectColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, "Please select a valid color."),
 });
 
 type ProjectFormValues = z.infer<typeof projectSchema>;
@@ -44,6 +45,7 @@ export default function ProjectMasterPage() {
   const companyId = user?.companyId || 1;
 
   const { canCreate, canEdit, canDelete } = usePagePermissions("projectmaster");
+  const confirm = useConfirmStore((state) => state.confirm);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
@@ -81,7 +83,7 @@ export default function ProjectMasterPage() {
       setIsModalOpen(false);
       reset();
       setEditingProject(null);
-      toast.success(res.message || (editingProject ? "Project updated successfully!" : "Project created successfully!"));
+      toast.success(res.message || (editingProject ? "Project updated successfully." : "Project created successfully."));
     },
     onError: (err: any) => {
         toast.error(getErrorMessage(err));
@@ -92,7 +94,7 @@ export default function ProjectMasterPage() {
     mutationFn: (id: number) => projectService.delete(id),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["projects", companyId] });
-      toast.success(res.message || "Project deleted successfully!");
+      toast.success(res.message || "Project deleted successfully.");
     },
     onError: (err: any) => {
         toast.error(getErrorMessage(err));
@@ -178,7 +180,16 @@ export default function ProjectMasterPage() {
                       </button>
                     )}
                     {canDelete && (
-                      <button onClick={() => deleteMutation.mutate(project.projectId)} className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors">
+                      <button onClick={() => {
+                        confirm({
+                          title: "Delete Project?",
+                          message: `Are you sure you want to delete ${project.projectName}? This action cannot be undone.`,
+                          confirmText: "Delete",
+                          cancelText: "Cancel",
+                          variant: "danger",
+                          onConfirm: () => deleteMutation.mutate(project.projectId)
+                        });
+                      }} className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     )}

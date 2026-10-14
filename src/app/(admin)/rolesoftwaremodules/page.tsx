@@ -67,11 +67,11 @@ export default function AccessControlPage() {
       return roleService.savePermissions(selectedRoleId, flatList);
     },
     onSuccess: () => {
-      toast.success("Permissions updated successfully!");
+      toast.success("Permissions updated successfully.");
       queryClient.invalidateQueries({ queryKey: ["permissions", selectedRoleId] });
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.message || "Failed to save permissions");
+      toast.error(err.response?.data?.message || "Failed to save permissions. Please try again.");
     }
   });
 

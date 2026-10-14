@@ -21,17 +21,18 @@ import { Modal } from "@/components/ui/Modal";
 import { moduleService, Module } from "@/services/api/module.service";
 import { useAuthStore } from "@/store/useAuthStore";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { useConfirmStore } from "@/store/useConfirmStore";
 import { toast } from "sonner";
 
 const getErrorMessage = (err: any) => {
     if (err.response?.data?.errors) {
         return Object.values(err.response.data.errors).flat().join(", ");
     }
-    return err.response?.data?.message || err.message || "An unexpected error occurred";
+    return err.response?.data?.message || err.message || "An unexpected error occurred. Please try again.";
 };
 
 const moduleSchema = z.object({
-  moduleName: z.string().min(2, "Module Name is required"),
+  moduleName: z.string().min(2, "Module name is required."),
   parentModuleId: z.string().optional().or(z.literal("")),
 });
 
@@ -43,6 +44,7 @@ export default function ModuleMasterPage() {
   const companyId = user?.companyId || 1;
 
   const { canCreate, canEdit, canDelete } = usePagePermissions("modulemaster");
+  const confirm = useConfirmStore((state) => state.confirm);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<Module | null>(null);
@@ -73,7 +75,7 @@ export default function ModuleMasterPage() {
       setIsModalOpen(false);
       reset();
       setEditingModule(null);
-      toast.success(res.message || (editingModule ? "Module updated successfully!" : "Module created successfully!"));
+      toast.success(res.message || (editingModule ? "Module updated successfully." : "Module created successfully."));
     },
     onError: (err: any) => {
         toast.error(getErrorMessage(err));
@@ -84,7 +86,7 @@ export default function ModuleMasterPage() {
     mutationFn: (id: number) => moduleService.delete(id),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["modules", companyId] });
-      toast.success(res.message || "Module deleted successfully!");
+      toast.success(res.message || "Module deleted successfully.");
     },
     onError: (err: any) => {
         toast.error(getErrorMessage(err));
@@ -165,7 +167,16 @@ export default function ModuleMasterPage() {
                       </button>
                     )}
                     {canDelete && (
-                      <button onClick={() => deleteMutation.mutate(mod.moduleId)} className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors">
+                      <button onClick={() => {
+                        confirm({
+                          title: "Delete Module?",
+                          message: `Are you sure you want to delete ${mod.moduleName}? This action cannot be undone.`,
+                          confirmText: "Delete",
+                          cancelText: "Cancel",
+                          variant: "danger",
+                          onConfirm: () => deleteMutation.mutate(mod.moduleId)
+                        });
+                      }} className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     )}

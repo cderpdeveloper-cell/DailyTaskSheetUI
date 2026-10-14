@@ -39,6 +39,7 @@ import { taskSheetService, WorkReport, SaveReportDTO } from "@/services/api/task
 import { projectService } from "@/services/api/project.service";
 import { statusService } from "@/services/api/status.service";
 import { moduleService } from "@/services/api/module.service";
+import { emailSettingsService } from "@/services/api/emailSettings.service";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useToastStore } from "@/store/useToastStore";
 import { useConfirmStore } from "@/store/useConfirmStore";
@@ -338,6 +339,15 @@ export default function TaskSheetPage() {
     },
   });
 
+  const { data: smtpSettings } = useQuery({
+    queryKey: ["smtpSettings", employeeId],
+    queryFn: () => emailSettingsService.getSmtpSettings(employeeId),
+    enabled: !!employeeId,
+    select: (res) => res.data?.data,
+  });
+
+  const isEmailServiceActive = !!smtpSettings?.activeStatus;
+
   const activePreviewReport = useMemo(() => {
     if (!activePreviewId) return null;
     return reports.find((r: any) => r.id === activePreviewId);
@@ -377,7 +387,7 @@ export default function TaskSheetPage() {
     if (!historySearch.trim()) return reports;
     const q = historySearch.toLowerCase().trim();
     return reports.filter((r: WorkReport) => {
-      const dateFormatted = new Date(r.reportDate).toLocaleDateString();
+      const dateFormatted = new Date(r.reportDate).toLocaleDateString('en-GB');
       const dateIso = r.reportDate.toString();
       return dateFormatted.toLowerCase().includes(q) || dateIso.includes(q);
     });
@@ -412,7 +422,7 @@ export default function TaskSheetPage() {
     onSuccess: (res) => {
       if (res.data.success) {
         queryClient.invalidateQueries({ queryKey: ["taskReports", employeeId] });
-        addToast("Task Performance Synchronized!", "success");
+        addToast("Task sheet saved successfully.", "success");
 
         //  SMOOTH POST-SAVE EXPERIENCE
         setTimeout(() => {
@@ -420,10 +430,10 @@ export default function TaskSheetPage() {
           setExpandedIndex(null);
         }, 500);
       } else {
-        addToast(res.data.message || "Validation Failed", "error");
+        addToast(res.data.message || "Failed to save the task sheet. Please try again.", "error");
       }
     },
-    onError: (err: any) => addToast(err.response?.data?.message || "Failed to save report", "error"),
+    onError: (err: any) => addToast(err.response?.data?.message || "Failed to save the task sheet. Please try again.", "error"),
     onSettled: () => {
       isSavingRef.current = false;
     }
@@ -434,13 +444,13 @@ export default function TaskSheetPage() {
     onSuccess: (res) => {
       if (res.data.success) {
         queryClient.invalidateQueries({ queryKey: ["taskReports", employeeId] });
-        addToast(res.data.message || "Task sheet updated successfully!", "success");
+        addToast(res.data.message || "Task sheet updated successfully.", "success");
         handleCancelEdit();
       } else {
-        addToast(res.data.message || "Validation Failed", "error");
+        addToast(res.data.message || "Failed to update the task sheet. Please try again.", "error");
       }
     },
-    onError: (err: any) => addToast(err.response?.data?.message || "Failed to update report", "error"),
+    onError: (err: any) => addToast(err.response?.data?.message || "Failed to update the task sheet. Please try again.", "error"),
     onSettled: () => {
       isSavingRef.current = false;
     }
@@ -450,11 +460,11 @@ export default function TaskSheetPage() {
     mutationFn: (id: number) => taskSheetService.sendEmail(id),
     onSuccess: (res) => {
       if (res.data.success) {
-        addToast("Email Report Dispatched!", "success");
+        addToast("Email report sent successfully.", "success");
         queryClient.invalidateQueries({ queryKey: ["taskReports", employeeId] });
       }
     },
-    onError: (err: any) => addToast(err.response?.data?.message || "Failed to send email", "error"),
+    onError: (err: any) => addToast(err.response?.data?.message || "Failed to send the email report. Please try again.", "error"),
   });
 
   const previewEmailMutation = useMutation({
@@ -466,16 +476,16 @@ export default function TaskSheetPage() {
         setIsPreviewOpen(true);
       }
     },
-    onError: (err: any) => addToast(err.response?.data?.message || "Failed to generate preview", "error"),
+    onError: (err: any) => addToast(err.response?.data?.message || "Failed to generate email preview. Please try again.", "error"),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => taskSheetService.deleteReport(id),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["taskReports", employeeId] });
-      addToast(res.data.message || "Report deleted successfully", "success");
+      addToast(res.data.message || "Report deleted successfully.", "success");
     },
-    onError: (err: any) => addToast(err.response?.data?.message || "Failed to delete report", "error"),
+    onError: (err: any) => addToast(err.response?.data?.message || "Failed to delete the report. Please try again.", "error"),
   });
 
   // Drag and Drop Handlers
@@ -628,7 +638,7 @@ export default function TaskSheetPage() {
     if (isSavingRef.current || saveMutation.isPending || updateMutation.isPending) return;
 
     if (works.length === 0) {
-      addToast("Please add at least one work entry", "error");
+      addToast("Please add at least one work entry before saving.", "error");
       return;
     }
 
@@ -688,8 +698,13 @@ export default function TaskSheetPage() {
   // Keyboard Shortcuts
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Escape closes history drawer
-      if (e.key === 'Escape') {
+      // Escape closes preview modal first, then history drawer
+      if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
+        if (isPreviewOpen) {
+          e.preventDefault();
+          setIsPreviewOpen(false);
+          return;
+        }
         if (isHistoryModalOpen) {
           e.preventDefault();
           setIsHistoryModalOpen(false);
@@ -720,7 +735,9 @@ export default function TaskSheetPage() {
             if (currentReport && canDelete) {
               confirm({
                 title: "Delete Report?",
-                message: `Are you sure you want to delete the report for ${new Date(currentReport.reportDate).toLocaleDateString()}?`,
+                message: `Are you sure you want to delete the report for ${new Date(currentReport.reportDate).toLocaleDateString('en-GB')}? This action cannot be undone.`,
+                confirmText: "Delete",
+                cancelText: "Cancel",
                 variant: "danger",
                 onConfirm: () => deleteMutation.mutate(currentReport.id)
               });
@@ -774,7 +791,9 @@ export default function TaskSheetPage() {
             if (currentReport && canDelete) {
               confirm({
                 title: "Delete Report?",
-                message: `Are you sure you want to delete the report for ${new Date(currentReport.reportDate).toLocaleDateString()}?`,
+                message: `Are you sure you want to delete the report for ${new Date(currentReport.reportDate).toLocaleDateString('en-GB')}? This action cannot be undone.`,
+                confirmText: "Delete",
+                cancelText: "Cancel",
                 variant: "danger",
                 onConfirm: () => deleteMutation.mutate(currentReport.id)
               });
@@ -792,15 +811,15 @@ export default function TaskSheetPage() {
             return;
           }
 
-          // 'M' sends email for the selected report (if not sent)
-          if (e.key.toLowerCase() === 'm') {
+          // 'M' sends email for the selected report (if not sent and email service active)
+          if (isEmailServiceActive && e.key.toLowerCase() === 'm') {
             e.preventDefault();
             const currentReport = paginatedReports[selectedHistoryIndex];
             if (currentReport && !currentReport.isEmailSent && !sendEmailMutation.isPending) {
               confirm({
-                title: "Send Mail?",
-                message: "Are you sure you want to send mail?",
-                confirmText: "Send Mail",
+                title: "Send Email Report?",
+                message: "Are you sure you want to send this email report now?",
+                confirmText: "Send Email",
                 cancelText: "Cancel",
                 variant: "primary",
                 onConfirm: () => sendEmailMutation.mutate(currentReport.id)
@@ -851,29 +870,40 @@ export default function TaskSheetPage() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [works, reportDate, editingReportId, isHistoryModalOpen, projects, statuses, modules, saveMutation.isPending, updateMutation.isPending, totalHistoryPages, selectedHistoryIndex, paginatedReports, canEdit, canDelete]);
+  }, [works, reportDate, editingReportId, isPreviewOpen, isHistoryModalOpen, projects, statuses, modules, saveMutation.isPending, updateMutation.isPending, totalHistoryPages, selectedHistoryIndex, paginatedReports, canEdit, canDelete, isEmailServiceActive]);
 
   const columns = [
     {
       header: "Date",
-      accessor: (item: WorkReport) => <span className="font-bold text-slate-700">{new Date(item.reportDate).toLocaleDateString()}</span>,
+      accessor: (item: WorkReport) => <span className="font-bold text-slate-700">{new Date(item.reportDate).toLocaleDateString('en-GB')}</span>,
     },
     {
       header: "Actions",
       accessor: (item: WorkReport) => (
         <div className="flex items-center justify-end gap-2">
-          <button
-            className="p-2 bg-slate-50 text-slate-600 rounded-lg hover:bg-slate-800 hover:text-white transition-all disabled:opacity-50"
-            onClick={() => sendEmailMutation.mutate(item.id)}
-            disabled={sendEmailMutation.isPending}
-            title="Send Mail"
-          >
-            {sendEmailMutation.isPending && sendEmailMutation.variables === item.id ? (
-              <div className="w-4 h-4 border-2 border-slate-400 border-t-white rounded-full animate-spin" />
-            ) : (
-              <Mail className="w-4 h-4" />
-            )}
-          </button>
+          {isEmailServiceActive && (
+            <button
+              className="p-2 bg-slate-50 text-slate-600 rounded-lg hover:bg-slate-800 hover:text-white transition-all disabled:opacity-50"
+              onClick={() => {
+                confirm({
+                  title: "Send Email Report?",
+                  message: "Are you sure you want to send this email report now?",
+                  confirmText: "Send Email",
+                  cancelText: "Cancel",
+                  variant: "primary",
+                  onConfirm: () => sendEmailMutation.mutate(item.id)
+                });
+              }}
+              disabled={sendEmailMutation.isPending}
+              title="Send Mail"
+            >
+              {sendEmailMutation.isPending && sendEmailMutation.variables === item.id ? (
+                <div className="w-4 h-4 border-2 border-slate-400 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Mail className="w-4 h-4" />
+              )}
+            </button>
+          )}
           <button className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all" onClick={() => handleEditReport(item)} title="Edit">
             <Pencil className="w-4 h-4" />
           </button>
@@ -883,6 +913,8 @@ export default function TaskSheetPage() {
               confirm({
                 title: "Delete Report?",
                 message: "Are you sure you want to delete this task report? This action cannot be undone.",
+                confirmText: "Delete",
+                cancelText: "Cancel",
                 variant: "danger",
                 onConfirm: () => deleteMutation.mutate(item.id)
               });
@@ -1214,12 +1246,16 @@ export default function TaskSheetPage() {
                 <input
                   ref={historySearchInputRef}
                   type="text"
-                  placeholder="Filter by date (e.g. 10/10/2026)..."
+                  placeholder="Filter by date (e.g. 14/10/2026)..."
                   value={historySearch}
                   onChange={(e) => setHistorySearch(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Escape') {
+                    if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
                       e.stopPropagation();
+                      if (isPreviewOpen) {
+                        setIsPreviewOpen(false);
+                        return;
+                      }
                       if (historySearch) {
                         setHistorySearch("");
                       } else {
@@ -1250,15 +1286,14 @@ export default function TaskSheetPage() {
                       <div
                         key={report.id}
                         onClick={() => setSelectedHistoryIndex(rIdx)}
-                        className={`p-3 border rounded-xl transition-all space-y-2.5 shadow-xs hover:shadow-md bg-white group relative overflow-hidden cursor-pointer ${
-                          isSelected ? 'border-blue-500 ring-2 ring-blue-100 shadow-sm' : 'border-slate-200 hover:border-slate-300'
-                        }`}
+                        className={`p-3 border rounded-xl transition-all space-y-2.5 shadow-xs hover:shadow-md bg-white group relative overflow-hidden cursor-pointer ${isSelected ? 'border-blue-500 ring-2 ring-blue-100 shadow-sm' : 'border-slate-200 hover:border-slate-300'
+                          }`}
                       >
                         {/* 📧 EMAIL STATUS INDICATOR */}
                         {report.isEmailSent && (
                           <div className="absolute top-0 right-0">
                             <div className="bg-emerald-50 text-emerald-600 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter rounded-bl-lg border-l border-b border-emerald-100 flex items-center gap-1">
-                              <CheckCircle2 className="w-2.5 h-2.5" /> Mail Dispatched
+                              <CheckCircle2 className="w-2.5 h-2.5" /> Mail Sent
                             </div>
                           </div>
                         )}
@@ -1266,7 +1301,7 @@ export default function TaskSheetPage() {
                         <div className="flex items-center justify-between">
                           <div className="font-bold text-slate-700 text-sm flex items-center gap-2">
                             <Calendar className="w-4 h-4 text-blue-500" />
-                            {new Date(report.reportDate).toLocaleDateString()}
+                            {new Date(report.reportDate).toLocaleDateString('en-GB')}
                             <span className="text-slate-300 mx-0.5">|</span>
                             <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-500 flex items-center gap-1">
                               <Clock className="w-3 h-3" /> {calculateReportTotalHours(report)}
@@ -1282,9 +1317,8 @@ export default function TaskSheetPage() {
                               <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); handleEditReport(report); }}
-                                className={`p-1.5 rounded-lg transition-all flex items-center gap-1 ${
-                                  isSelected ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-xs' : 'bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white'
-                                }`}
+                                className={`p-1.5 rounded-lg transition-all flex items-center gap-1 ${isSelected ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-xs' : 'bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white'
+                                  }`}
                                 title="Edit Report [E]"
                               >
                                 <Pencil className="w-3.5 h-3.5" />
@@ -1298,14 +1332,15 @@ export default function TaskSheetPage() {
                                   e.stopPropagation();
                                   confirm({
                                     title: "Delete Report?",
-                                    message: `Are you sure you want to delete the report for ${new Date(report.reportDate).toLocaleDateString()}?`,
+                                    message: `Are you sure you want to delete the report for ${new Date(report.reportDate).toLocaleDateString('en-GB')}? This action cannot be undone.`,
+                                    confirmText: "Delete",
+                                    cancelText: "Cancel",
                                     variant: "danger",
                                     onConfirm: () => deleteMutation.mutate(report.id)
                                   });
                                 }}
-                                className={`p-1.5 rounded-lg transition-all flex items-center gap-1 ${
-                                  isSelected ? 'bg-red-600 text-white hover:bg-red-700 shadow-xs' : 'bg-red-50 text-red-600 hover:bg-red-600 hover:text-white'
-                                }`}
+                                className={`p-1.5 rounded-lg transition-all flex items-center gap-1 ${isSelected ? 'bg-red-600 text-white hover:bg-red-700 shadow-xs' : 'bg-red-50 text-red-600 hover:bg-red-600 hover:text-white'
+                                  }`}
                                 title="Delete Report [DEL]"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -1314,53 +1349,53 @@ export default function TaskSheetPage() {
                             )}
                           </div>
                         </div>
-                      <div className="flex gap-2 pt-0.5">
-                        <button
-                          type="button"
-                          onClick={() => previewEmailMutation.mutate(report.id)}
-                          disabled={previewEmailMutation.isPending}
-                          className="flex-1 py-1.5 bg-slate-100 text-slate-700 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
-                          title="View Mail [V]"
-                        >
-                          {previewEmailMutation.isPending && previewEmailMutation.variables === report.id ? (
-                            <div className="w-3.5 h-3.5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
-                          ) : (
-                            <Eye className="w-3.5 h-3.5 text-slate-500" />
-                          )}
-                          <span>View Mail</span>
-                          {isSelected && <span className="text-[9px] font-mono font-bold text-slate-600 bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-2xs">V</span>}
-                        </button>
-                        {!report.isEmailSent && (
+                        <div className="flex gap-2 pt-0.5">
                           <button
                             type="button"
-                            onClick={() => {
-                              confirm({
-                                title: "Send Mail?",
-                                message: "Are you sure you want to send mail?",
-                                confirmText: "Send Mail",
-                                cancelText: "Cancel",
-                                variant: "primary",
-                                onConfirm: () => sendEmailMutation.mutate(report.id)
-                              });
-                            }}
-                            disabled={sendEmailMutation.isPending}
-                            className="flex-1 py-1.5 bg-slate-800 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
-                            title="Send Mail [M]"
+                            onClick={() => previewEmailMutation.mutate(report.id)}
+                            disabled={previewEmailMutation.isPending}
+                            className="flex-1 py-1.5 bg-slate-100 text-slate-700 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                            title="View Mail [V]"
                           >
-                            {sendEmailMutation.isPending && sendEmailMutation.variables === report.id ? (
-                              <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                            {previewEmailMutation.isPending && previewEmailMutation.variables === report.id ? (
+                              <div className="w-3.5 h-3.5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
                             ) : (
-                              <Mail className="w-3.5 h-3.5 text-blue-400" />
+                              <Eye className="w-3.5 h-3.5 text-slate-500" />
                             )}
-                            <span>Send Mail</span>
-                            {isSelected && <span className="text-[9px] font-mono font-bold text-blue-200 bg-slate-700 px-1.5 py-0.5 rounded border border-slate-600 shadow-2xs">M</span>}
+                            <span>View Mail</span>
+                            {isSelected && <span className="text-[9px] font-mono font-bold text-slate-600 bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-2xs">V</span>}
                           </button>
-                        )}
+                          {isEmailServiceActive && !report.isEmailSent && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                confirm({
+                                  title: "Send Email Report?",
+                                  message: "Are you sure you want to send this email report now?",
+                                  confirmText: "Send Email",
+                                  cancelText: "Cancel",
+                                  variant: "primary",
+                                  onConfirm: () => sendEmailMutation.mutate(report.id)
+                                });
+                              }}
+                              disabled={sendEmailMutation.isPending}
+                              className="flex-1 py-1.5 bg-slate-800 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                              title="Send Mail [M]"
+                            >
+                              {sendEmailMutation.isPending && sendEmailMutation.variables === report.id ? (
+                                <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                              ) : (
+                                <Mail className="w-3.5 h-3.5 text-blue-400" />
+                              )}
+                              <span>Send Mail</span>
+                              {isSelected && <span className="text-[9px] font-mono font-bold text-blue-200 bg-slate-700 px-1.5 py-0.5 rounded border border-slate-600 shadow-2xs">M</span>}
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
 
@@ -1474,9 +1509,9 @@ export default function TaskSheetPage() {
                 onClick={() => {
                   if (activePreviewId) {
                     confirm({
-                      title: "Send Mail?",
-                      message: "Are you sure you want to send mail?",
-                      confirmText: "Send Mail",
+                      title: "Send Email Report?",
+                      message: "Are you sure you want to send this email report now?",
+                      confirmText: "Send Email",
                       cancelText: "Cancel",
                       variant: "primary",
                       onConfirm: () => {

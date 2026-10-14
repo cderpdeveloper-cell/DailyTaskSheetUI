@@ -10,10 +10,11 @@ import { Mail, Lock, LogIn, ArrowRight, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { authService } from "@/services/api/auth.service";
 import { useAuthStore } from "@/store/useAuthStore";
+import Cookies from "js-cookie";
 
 const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  email: z.string().email("Please enter a valid email address."),
+  password: z.string().min(6, "Password must be at least 6 characters."),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -22,6 +23,14 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  React.useEffect(() => {
+    const token = Cookies.get("accessToken") || Cookies.get("refreshToken");
+    if (isAuthenticated || token) {
+      router.replace("/dashboard");
+    }
+  }, [isAuthenticated, router]);
 
   const {
     register,
@@ -46,10 +55,10 @@ export default function LoginPage() {
         );
         router.push("/dashboard");
       } else {
-        setError(response.message || "Invalid credentials");
+        setError(response.message || "Invalid email or password. Please try again.");
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || "An error occurred during login");
+      setError(err.response?.data?.message || "Unable to sign in. Please try again later.");
     }
   };
 

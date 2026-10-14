@@ -14,31 +14,27 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated, logout } = useAuthStore();
+  const { isAuthenticated, logout, _hasHydrated } = useAuthStore();
   const [isLoaded, setIsLoaded] = React.useState(false);
   const router = useRouter();
 
   useEffect(() => {
     setIsLoaded(true);
+  }, []);
 
-    // Fallback: check cookie if store is not yet ready
-    const token = Cookies.get("accessToken");
-    if (!isAuthenticated && !token) {
-      router.push("/login");
-    }
-  }, [isAuthenticated, router]);
-
-  // Handle manual logout if token is missing
   useEffect(() => {
-    const token = Cookies.get("accessToken");
-    if (isLoaded && !token && isAuthenticated) {
-      logout();
+    if (!isLoaded) return;
+
+    const token = Cookies.get("accessToken") || Cookies.get("refreshToken");
+    if (_hasHydrated && !isAuthenticated && !token) {
       router.push("/login");
     }
-  }, [isLoaded, isAuthenticated, logout, router]);
+  }, [isLoaded, _hasHydrated, isAuthenticated, router]);
+
+  const hasToken = typeof window !== "undefined" && (Cookies.get("accessToken") || Cookies.get("refreshToken"));
 
   // Loading state while checking authentication
-  if (!isLoaded || (!isAuthenticated && !Cookies.get("accessToken"))) {
+  if (!isLoaded || (!_hasHydrated && !hasToken)) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50 flex-col gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>

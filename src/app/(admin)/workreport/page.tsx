@@ -12,6 +12,7 @@ import { workLogService, WorkLogCreateDTO, WorkLog, WorkReportSessionDTO } from 
 import { projectService } from "@/services/api/project.service";
 import { clientService } from "@/services/api/client.service";
 import { statusService } from "@/services/api/status.service";
+import { emailSettingsService } from "@/services/api/emailSettings.service";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useConfirmStore } from "@/store/useConfirmStore";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
@@ -159,6 +160,15 @@ export default function WorkReportPage() {
    const { data: projectsRaw = [] } = useQuery({ queryKey: ["projectsList", companyId], queryFn: () => projectService.list(companyId), staleTime: 15 * 60 * 1000, select: (res) => res.data || [] });
    const { data: statuses = [] } = useQuery({ queryKey: ["statusesList", companyId], queryFn: () => statusService.list(companyId), staleTime: 15 * 60 * 1000, select: (res) => res.data || [] });
    const { data: history = [] } = useQuery({ queryKey: ["workLogs", employeeId], queryFn: () => workLogService.getLogs(employeeId), staleTime: 60 * 1000, select: (res) => res.data.data || [] });
+
+   const { data: smtpSettings } = useQuery({
+      queryKey: ["smtpSettings", employeeId],
+      queryFn: () => emailSettingsService.getSmtpSettings(employeeId),
+      enabled: !!employeeId,
+      select: (res) => res.data?.data,
+   });
+
+   const isEmailServiceActive = !!smtpSettings?.activeStatus;
 
    const activePreviewReport = useMemo(() => {
       if (!activePreviewId) return null;
@@ -395,7 +405,7 @@ export default function WorkReportPage() {
       mutationFn: (data: WorkReportSessionDTO) => workLogService.saveSession(data),
       onSuccess: (res) => {
          if (res.data.success) {
-            addToast("All Work Logs Synchronized Successfully!", "success");
+            addToast("Daily work logs saved successfully.", "success");
             queryClient.invalidateQueries({ queryKey: ["workLogs", employeeId] });
 
             // 🌟 SMOOTH POST-SAVE EXPERIENCE
@@ -406,7 +416,7 @@ export default function WorkReportPage() {
          }
       },
       onError: (err: any) => {
-         addToast(err.response?.data?.message || "Failed to save work logs", "error");
+         addToast(err.response?.data?.message || "Failed to save work logs. Please try again.", "error");
       },
       onSettled: () => {
          isSavingRef.current = false;
@@ -415,18 +425,18 @@ export default function WorkReportPage() {
 
    const deleteSessionMutation = useMutation({
       mutationFn: (date: string) => workLogService.deleteSession(date),
-      onSuccess: (res) => { if (res.data.success) { addToast("Daily Audit Removed", "success"); queryClient.invalidateQueries({ queryKey: ["workLogs", employeeId] }); } }
+      onSuccess: (res) => { if (res.data.success) { addToast("Daily audit deleted successfully.", "success"); queryClient.invalidateQueries({ queryKey: ["workLogs", employeeId] }); } }
    });
 
    const sendEmailMutation = useMutation({
       mutationFn: (id: number) => workLogService.sendEmail(id),
       onSuccess: (res) => {
          if (res.data.success) {
-            addToast("Email Report Dispatched!", "success");
+            addToast("Email report sent successfully.", "success");
             queryClient.invalidateQueries({ queryKey: ["workLogs", employeeId] });
          }
       },
-      onError: (err: any) => { addToast(err.response?.data?.message || "Failed to send email", "error"); }
+      onError: (err: any) => { addToast(err.response?.data?.message || "Failed to send the email report. Please try again.", "error"); }
    });
 
    const previewEmailMutation = useMutation({
@@ -439,7 +449,7 @@ export default function WorkReportPage() {
          }
       },
       onError: (err: any) => {
-         addToast(err.response?.data?.message || "Failed to generate preview", "error");
+         addToast(err.response?.data?.message || "Failed to generate email preview. Please try again.", "error");
       }
    });
 
@@ -464,7 +474,7 @@ export default function WorkReportPage() {
          }));
          setExpandedIndex(0);
          setIsHistoryOpen(false);
-         addToast("Log Loaded for Edit", "success");
+         addToast("Work log loaded for editing.", "info");
       }
    };
 
@@ -507,8 +517,13 @@ export default function WorkReportPage() {
    // --- Keyboard Shortcuts ---
    useEffect(() => {
       const handleKeys = (e: KeyboardEvent) => {
-         // Escape closes history drawer
-         if (e.key === 'Escape') {
+         // Escape closes preview modal first, then history drawer
+         if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
+            if (isPreviewOpen) {
+               e.preventDefault();
+               setIsPreviewOpen(false);
+               return;
+            }
             if (isHistoryOpen) {
                e.preventDefault();
                setIsHistoryOpen(false);
@@ -540,8 +555,10 @@ export default function WorkReportPage() {
                   const currentReport = paginatedHistory[selectedHistoryIndex];
                   if (currentReport && canDelete && !currentReport.isEmailSent) {
                      confirm({
-                        title: "Delete Audit?",
-                        message: "Are you sure you want to delete this daily audit permanently?",
+                        title: "Delete Daily Audit?",
+                        message: "Are you sure you want to delete this daily audit? This action cannot be undone.",
+                        confirmText: "Delete",
+                        cancelText: "Cancel",
                         variant: "danger",
                         onConfirm: () => deleteSessionMutation.mutate(currentReport.workDate.split('T')[0])
                      });
@@ -594,8 +611,10 @@ export default function WorkReportPage() {
                   const currentReport = paginatedHistory[selectedHistoryIndex];
                   if (currentReport && canDelete && !currentReport.isEmailSent) {
                      confirm({
-                        title: "Delete Audit?",
-                        message: "Are you sure you want to delete this daily audit permanently?",
+                        title: "Delete Daily Audit?",
+                        message: "Are you sure you want to delete this daily audit? This action cannot be undone.",
+                        confirmText: "Delete",
+                        cancelText: "Cancel",
                         variant: "danger",
                         onConfirm: () => deleteSessionMutation.mutate(currentReport.workDate.split('T')[0])
                      });
@@ -619,9 +638,9 @@ export default function WorkReportPage() {
                   const currentReport = paginatedHistory[selectedHistoryIndex];
                   if (currentReport && !currentReport.isEmailSent && !sendEmailMutation.isPending) {
                      confirm({
-                        title: "Send Mail?",
-                        message: "Are you sure you want to send mail?",
-                        confirmText: "Send Mail",
+                        title: "Send Email Report?",
+                        message: "Are you sure you want to send this email report now?",
+                        confirmText: "Send Email",
                         cancelText: "Cancel",
                         variant: "primary",
                         onConfirm: () => sendEmailMutation.mutate(currentReport.workLogId)
@@ -679,13 +698,13 @@ export default function WorkReportPage() {
       };
       window.addEventListener('keydown', handleKeys);
       return () => window.removeEventListener('keydown', handleKeys);
-   }, [logs, expandedIndex, selectedDate, sessionMutation.isPending, isCurrentDateSent, isHistoryOpen, totalHistoryPages, selectedHistoryIndex, paginatedHistory, canEdit, canDelete]);
+   }, [logs, expandedIndex, selectedDate, sessionMutation.isPending, isCurrentDateSent, isPreviewOpen, isHistoryOpen, totalHistoryPages, selectedHistoryIndex, paginatedHistory, canEdit, canDelete, isEmailServiceActive]);
 
    const handleSaveSession = () => {
       if (isSavingRef.current || sessionMutation.isPending || isCurrentDateSent) return;
 
       if (logs.some(l => !l.clientId || !l.projectId || l.tasks.some(t => !t.description))) {
-         addToast("Required fields are missing.", "error"); return;
+         addToast("Please fill in all required fields (Client, Project, and Task description) before saving.", "error"); return;
       }
 
       isSavingRef.current = true;
@@ -725,7 +744,7 @@ export default function WorkReportPage() {
                   </button>
                   <button onClick={handleSaveSession} disabled={sessionMutation.isPending || isCurrentDateSent} className={`h-10 px-6 rounded-lg font-bold text-xs flex items-center gap-2 transition-all ${isCurrentDateSent ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'}`}>
                      {sessionMutation.isPending ? <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : isCurrentDateSent ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-                     {isCurrentDateSent ? 'Report Dispatched' : 'Save Changes'} {!isCurrentDateSent && <span className="opacity-40 ml-1 text-[9px]">[CTRL+S]</span>}
+                     {isCurrentDateSent ? 'Report Sent' : 'Save Changes'} {!isCurrentDateSent && <span className="opacity-40 ml-1 text-[9px]">[CTRL+S]</span>}
                   </button>
                </div>
             </div>
@@ -1008,12 +1027,16 @@ export default function WorkReportPage() {
                            <input
                               ref={historySearchInputRef}
                               type="text"
-                              placeholder="Filter by date (e.g. 10/10/2026)..."
+                              placeholder="Filter by date (e.g. 14/10/2026)..."
                               value={historySearch}
                               onChange={(e) => setHistorySearch(e.target.value)}
                               onKeyDown={(e) => {
-                                 if (e.key === 'Escape') {
+                                 if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
                                     e.stopPropagation();
+                                    if (isPreviewOpen) {
+                                       setIsPreviewOpen(false);
+                                       return;
+                                    }
                                     if (historySearch) {
                                        setHistorySearch("");
                                     } else {
@@ -1051,7 +1074,7 @@ export default function WorkReportPage() {
                                  {h.isEmailSent && (
                                     <div className="absolute top-0 right-0">
                                        <div className="bg-emerald-50 text-emerald-600 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter rounded-bl-lg border-l border-b border-emerald-100 flex items-center gap-1">
-                                          <CheckCircle className="w-2.5 h-2.5" /> Mail Dispatched
+                                          <CheckCircle className="w-2.5 h-2.5" /> Mail Sent
                                        </div>
                                     </div>
                                  )}
@@ -1073,7 +1096,7 @@ export default function WorkReportPage() {
                                           </span>
                                        )}
                                     </div>
-                                    {!h.isEmailSent && (
+                                    {isEmailServiceActive && !h.isEmailSent && (
                                        <div className="flex gap-1.5 items-center">
                                           {canEdit && (
                                              <button
@@ -1094,8 +1117,10 @@ export default function WorkReportPage() {
                                                 onClick={(e) => {
                                                    e.stopPropagation();
                                                    confirm({
-                                                      title: "Delete Audit?",
-                                                      message: "Are you sure you want to delete this daily audit permanently?",
+                                                      title: "Delete Daily Audit?",
+                                                      message: "Are you sure you want to delete this daily audit? This action cannot be undone.",
+                                                      confirmText: "Delete",
+                                                      cancelText: "Cancel",
                                                       variant: "danger",
                                                       onConfirm: () => deleteSessionMutation.mutate(h.workDate.split('T')[0])
                                                    });
@@ -1128,15 +1153,15 @@ export default function WorkReportPage() {
                                        <span>View Mail</span>
                                        {isSelected && <span className="text-[9px] font-mono font-bold text-slate-600 bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-2xs">V</span>}
                                     </button>
-                                    {!h.isEmailSent && (
+                                    {isEmailServiceActive && !h.isEmailSent && (
                                        <button
                                           type="button"
                                           onClick={(e) => {
                                              e.stopPropagation();
                                              confirm({
-                                                title: "Send Mail?",
-                                                message: "Are you sure you want to send mail?",
-                                                confirmText: "Send Mail",
+                                                title: "Send Email Report?",
+                                                message: "Are you sure you want to send this email report now?",
+                                                confirmText: "Send Email",
                                                 cancelText: "Cancel",
                                                 variant: "primary",
                                                 onConfirm: () => sendEmailMutation.mutate(h.workLogId)
@@ -1177,9 +1202,10 @@ export default function WorkReportPage() {
                            <span className="flex items-center gap-1 font-medium">
                               <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-mono shadow-2xs font-bold text-slate-700">V</kbd> View
                            </span>
-                           <span className="flex items-center gap-1 font-medium">
+                           {isEmailServiceActive && (
+<span className="flex items-center gap-1 font-medium">
                               <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-mono shadow-2xs font-bold text-indigo-600">M</kbd> Send
-                           </span>
+                           </span>)}
                            <span className="flex items-center gap-1 font-medium">
                               <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-mono shadow-2xs font-bold text-slate-700">←/→</kbd> Page
                            </span>
@@ -1267,15 +1293,15 @@ export default function WorkReportPage() {
                   >
                      Close
                   </button>
-                  {!activePreviewReport?.isEmailSent && (
+                  {isEmailServiceActive && !activePreviewReport?.isEmailSent && (
                      <button
                         type="button"
                         onClick={() => {
                            if (activePreviewId) {
                               confirm({
-                                 title: "Send Mail?",
-                                 message: "Are you sure you want to send mail?",
-                                 confirmText: "Send Mail",
+                                 title: "Send Email Report?",
+                                 message: "Are you sure you want to send this email report now?",
+                                 confirmText: "Send Email",
                                  cancelText: "Cancel",
                                  variant: "primary",
                                  onConfirm: () => {

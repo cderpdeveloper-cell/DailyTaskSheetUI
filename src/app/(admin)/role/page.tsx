@@ -64,11 +64,11 @@ export default function RoleMasterPage() {
     mutationFn: (role: Partial<Role>) => roleService.save(role),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["roles", companyId] });
-      toast.success(roleMasterId ? "Role updated successfully" : "Role created successfully");
+      toast.success(roleMasterId ? "Role updated successfully." : "Role created successfully.");
       closeRoleModal();
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.message || "Something went wrong");
+      toast.error(err.response?.data?.message || "Failed to save the role. Please try again.");
     }
   });
 
@@ -76,11 +76,11 @@ export default function RoleMasterPage() {
     mutationFn: (id: number) => roleService.delete(id),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["roles", companyId] });
-      toast.success(res.message || "Role deleted successfully");
+      toast.success(res.message || "Role deleted successfully.");
       setOpenMenuId(null);
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.message || "Cannot delete role");
+      toast.error(err.response?.data?.message || "Failed to delete the role. Please try again.");
     }
   });
 
@@ -133,7 +133,7 @@ export default function RoleMasterPage() {
   const permissionMutation = useMutation({
     mutationFn: (perms: Permission[]) => roleService.savePermissions(selectedRole!.roleMasterId, perms),
     onSuccess: () => {
-      toast.success("Permissions saved successfully!");
+      toast.success("Permissions updated successfully.");
       setIsPermissionModalOpen(false);
     },
   });
@@ -283,7 +283,7 @@ export default function RoleMasterPage() {
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
-        title="Confirm Deletion"
+        title="Delete Role?"
         size="sm"
         footer={(
           <>
@@ -291,7 +291,7 @@ export default function RoleMasterPage() {
               Cancel
             </Button>
             <Button variant="danger" onClick={confirmDelete}>
-              Yes, Delete
+              Delete
             </Button>
           </>
         )}
@@ -301,9 +301,9 @@ export default function RoleMasterPage() {
             <Trash2 className="w-8 h-8" />
           </div>
           <div className="text-center">
-            <h3 className="text-lg font-bold text-gray-900">Are you sure?</h3>
+            <h3 className="text-lg font-bold text-gray-900">Delete Role?</h3>
             <p className="text-sm text-gray-500 mt-2">
-              This action cannot be undone. This role will be removed or deactivated.
+              Are you sure you want to delete this role? This action cannot be undone.
             </p>
           </div>
         </div>

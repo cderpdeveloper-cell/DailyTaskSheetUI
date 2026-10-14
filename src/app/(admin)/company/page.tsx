@@ -24,11 +24,11 @@ import { getFullUrl } from "@/services/api/apiConfig";
 import { toast } from "sonner";
 
 const companySchema = z.object({
-  companyName: z.string().min(2, "Company Name is required"),
+  companyName: z.string().min(2, "Company name is required."),
   fullAddress: z.string().optional(),
-  email: z.string().email("Invalid email address").optional().or(z.literal("")),
+  email: z.string().email("Please enter a valid email address.").optional().or(z.literal("")),
   phoneNo: z.string().optional(),
-  website: z.string().url("Invalid URL").optional().or(z.literal("")),
+  website: z.string().url("Please enter a valid website URL.").optional().or(z.literal("")),
 });
 
 type CompanyFormValues = z.infer<typeof companySchema>;
@@ -76,10 +76,10 @@ export default function CompanyProfilePage() {
     mutationFn: (formData: FormData) => companyService.update(formData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company", companyId] });
-      toast.success("Company details updated successfully!");
+      toast.success("Company details updated successfully.");
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.message || "Failed to update company");
+      toast.error(err.response?.data?.message || "Failed to update company details. Please try again.");
     }
   });
 

@@ -11,13 +11,13 @@ import { useRouter } from "next/navigation";
 import { authService } from "@/services/api/auth.service";
 
 const signupSchema = z.object({
-  fullName: z.string().min(2, "Full Name is required"),
-  companyName: z.string().min(2, "Company Name is required"),
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string().min(6, "Confirm password is required"),
+  fullName: z.string().min(2, "Full name is required."),
+  companyName: z.string().min(2, "Company name is required."),
+  email: z.string().email("Please enter a valid email address."),
+  password: z.string().min(6, "Password must be at least 6 characters."),
+  confirmPassword: z.string().min(6, "Confirm password is required."),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords must match",
+  message: "Passwords do not match.",
   path: ["confirmPassword"],
 });
 
@@ -42,10 +42,10 @@ export default function SignupPage() {
       if (response.success) {
         router.push("/login?signup=success");
       } else {
-        setError(response.message || "Registration failed");
+        setError(response.message || "Registration failed. Please check your details and try again.");
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || "An error occurred during registration");
+      setError(err.response?.data?.message || "An error occurred during registration. Please try again later.");
     }
   };
 
