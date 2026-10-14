@@ -151,6 +151,9 @@ export default function WorkReportPage() {
    const [activePreviewId, setActivePreviewId] = useState<number | null>(null);
    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
    const [dragEnabledIndex, setDragEnabledIndex] = useState<number | null>(null);
+   const isSavingRef = useRef(false);
+   const historySearchInputRef = useRef<HTMLInputElement>(null);
+   const [selectedHistoryIndex, setSelectedHistoryIndex] = useState<number>(0);
 
    const { data: clientsRaw = [] } = useQuery({ queryKey: ["clientsList", companyId], queryFn: () => clientService.list(companyId), staleTime: 15 * 60 * 1000, select: (res) => res.data || [] });
    const { data: projectsRaw = [] } = useQuery({ queryKey: ["projectsList", companyId], queryFn: () => projectService.list(companyId), staleTime: 15 * 60 * 1000, select: (res) => res.data || [] });
@@ -289,6 +292,18 @@ export default function WorkReportPage() {
       setHistoryPage(1);
    }, [historySearch]);
 
+   useEffect(() => {
+      setSelectedHistoryIndex(0);
+   }, [historyPage, historySearch, isHistoryOpen]);
+
+   useEffect(() => {
+      if (isHistoryOpen) {
+         setTimeout(() => {
+            historySearchInputRef.current?.focus();
+         }, 100);
+      }
+   }, [isHistoryOpen]);
+
    // --- Handlers ---
    const addClientSession = () => {
       const newIdx = logs.length;
@@ -389,6 +404,12 @@ export default function WorkReportPage() {
                setExpandedIndex(0);
             }, 500);
          }
+      },
+      onError: (err: any) => {
+         addToast(err.response?.data?.message || "Failed to save work logs", "error");
+      },
+      onSettled: () => {
+         isSavingRef.current = false;
       }
    });
 
@@ -486,18 +507,188 @@ export default function WorkReportPage() {
    // --- Keyboard Shortcuts ---
    useEffect(() => {
       const handleKeys = (e: KeyboardEvent) => {
-         if (e.altKey && e.key.toLowerCase() === 'n') { e.preventDefault(); addClientSession(); }
-         if (e.altKey && e.key.toLowerCase() === 'a') { e.preventDefault(); if (expandedIndex !== null) addSubActivity(expandedIndex); }
-         if (e.ctrlKey && e.key.toLowerCase() === 's') { e.preventDefault(); handleSaveSession(); }
+         // Escape closes history drawer
+         if (e.key === 'Escape') {
+            if (isHistoryOpen) {
+               e.preventDefault();
+               setIsHistoryOpen(false);
+               return;
+            }
+         }
+
+         // Archive Explorer specific keyboard shortcuts
+         if (isHistoryOpen) {
+            const isInputFocused = document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA';
+
+            if (isInputFocused) {
+               if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  (document.activeElement as HTMLElement)?.blur();
+                  setSelectedHistoryIndex(0);
+                  return;
+               }
+               if (e.altKey && e.key.toLowerCase() === 'e') {
+                  e.preventDefault();
+                  const currentReport = paginatedHistory[selectedHistoryIndex];
+                  if (currentReport && canEdit && !currentReport.isEmailSent) {
+                     loadSessionForEdit(currentReport.workDate.split('T')[0]);
+                  }
+                  return;
+               }
+               if (e.altKey && (e.key === 'Delete' || e.key.toLowerCase() === 'd')) {
+                  e.preventDefault();
+                  const currentReport = paginatedHistory[selectedHistoryIndex];
+                  if (currentReport && canDelete && !currentReport.isEmailSent) {
+                     confirm({
+                        title: "Delete Audit?",
+                        message: "Are you sure you want to delete this daily audit permanently?",
+                        variant: "danger",
+                        onConfirm: () => deleteSessionMutation.mutate(currentReport.workDate.split('T')[0])
+                     });
+                  }
+                  return;
+               }
+            } else {
+               // Up / Down arrow to select record in Archive Explorer
+               if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  setSelectedHistoryIndex((prev) => Math.max(0, prev - 1));
+                  return;
+               }
+               if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  setSelectedHistoryIndex((prev) => Math.min(paginatedHistory.length - 1, prev + 1));
+                  return;
+               }
+
+               // Direct number keys (1, 2, 3) to pick item index
+               if (e.key === '1' && paginatedHistory.length >= 1) { setSelectedHistoryIndex(0); return; }
+               if (e.key === '2' && paginatedHistory.length >= 2) { setSelectedHistoryIndex(1); return; }
+               if (e.key === '3' && paginatedHistory.length >= 3) { setSelectedHistoryIndex(2); return; }
+
+               // Left / Right arrow for pagination
+               if (e.key === 'ArrowLeft') {
+                  e.preventDefault();
+                  setHistoryPage((p) => Math.max(1, p - 1));
+                  return;
+               }
+               if (e.key === 'ArrowRight') {
+                  e.preventDefault();
+                  setHistoryPage((p) => Math.min(totalHistoryPages, p + 1));
+                  return;
+               }
+
+               // 'E' or 'Enter' edits the currently selected report
+               if (e.key.toLowerCase() === 'e' || e.key === 'Enter') {
+                  e.preventDefault();
+                  const currentReport = paginatedHistory[selectedHistoryIndex];
+                  if (currentReport && canEdit && !currentReport.isEmailSent) {
+                     loadSessionForEdit(currentReport.workDate.split('T')[0]);
+                  }
+                  return;
+               }
+
+               // 'Delete' or 'D' deletes the currently selected report
+               if (e.key === 'Delete' || e.key.toLowerCase() === 'd') {
+                  e.preventDefault();
+                  const currentReport = paginatedHistory[selectedHistoryIndex];
+                  if (currentReport && canDelete && !currentReport.isEmailSent) {
+                     confirm({
+                        title: "Delete Audit?",
+                        message: "Are you sure you want to delete this daily audit permanently?",
+                        variant: "danger",
+                        onConfirm: () => deleteSessionMutation.mutate(currentReport.workDate.split('T')[0])
+                     });
+                  }
+                  return;
+               }
+
+               // 'V' previews the email for the selected report
+               if (e.key.toLowerCase() === 'v') {
+                  e.preventDefault();
+                  const currentReport = paginatedHistory[selectedHistoryIndex];
+                  if (currentReport) {
+                     previewEmailMutation.mutate(currentReport.workLogId);
+                  }
+                  return;
+               }
+
+               // 'M' sends email for the selected report
+               if (e.key.toLowerCase() === 'm') {
+                  e.preventDefault();
+                  const currentReport = paginatedHistory[selectedHistoryIndex];
+                  if (currentReport && !currentReport.isEmailSent && !sendEmailMutation.isPending) {
+                     confirm({
+                        title: "Send Mail?",
+                        message: "Are you sure you want to send mail?",
+                        confirmText: "Send Mail",
+                        cancelText: "Cancel",
+                        variant: "primary",
+                        onConfirm: () => sendEmailMutation.mutate(currentReport.workLogId)
+                     });
+                  }
+                  return;
+               }
+
+               // '/' to focus search input
+               if (e.key === '/') {
+                  e.preventDefault();
+                  historySearchInputRef.current?.focus();
+                  historySearchInputRef.current?.select();
+                  return;
+               }
+            }
+         }
+
+         // Ctrl + S saves
+         if (e.ctrlKey && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!sessionMutation.isPending && !isSavingRef.current && !isCurrentDateSent) {
+               handleSaveSession();
+            }
+            return;
+         }
+
+         // Alt + N adds entry
+         if (e.altKey && e.key.toLowerCase() === 'n') {
+            e.preventDefault();
+            addClientSession();
+            return;
+         }
+
+         // Alt + A adds sub activity
+         if (e.altKey && e.key.toLowerCase() === 'a') {
+            e.preventDefault();
+            if (expandedIndex !== null) addSubActivity(expandedIndex);
+            return;
+         }
+
+         // Alt + H toggles Archive Explorer
+         if (e.altKey && e.key.toLowerCase() === 'h') {
+            e.preventDefault();
+            setIsHistoryOpen((prev) => {
+               if (!prev) {
+                  setHistoryPage(1);
+                  setHistorySearch("");
+               }
+               return !prev;
+            });
+            return;
+         }
       };
       window.addEventListener('keydown', handleKeys);
       return () => window.removeEventListener('keydown', handleKeys);
-   }, [logs, expandedIndex, selectedDate]);
+   }, [logs, expandedIndex, selectedDate, sessionMutation.isPending, isCurrentDateSent, isHistoryOpen, totalHistoryPages, selectedHistoryIndex, paginatedHistory, canEdit, canDelete]);
 
    const handleSaveSession = () => {
+      if (isSavingRef.current || sessionMutation.isPending || isCurrentDateSent) return;
+
       if (logs.some(l => !l.clientId || !l.projectId || l.tasks.some(t => !t.description))) {
          addToast("Required fields are missing.", "error"); return;
       }
+
+      isSavingRef.current = true;
       sessionMutation.mutate({
          workDate: selectedDate,
          logs: logs.map(l => ({
@@ -525,8 +716,12 @@ export default function WorkReportPage() {
                      <Calendar className="w-4 h-4 text-slate-500" />
                      <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="bg-transparent border-none focus:ring-0 text-xs font-bold text-slate-700 outline-none uppercase" />
                   </div>
-                  <button onClick={() => { setIsHistoryOpen(true); setHistoryPage(1); setHistorySearch(""); }} className="h-10 px-4 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs flex items-center gap-2 hover:bg-slate-50 transition-all">
-                     <History className="w-4 h-4" /> View Archive
+                  <button
+                     onClick={() => { setIsHistoryOpen(true); setHistoryPage(1); setHistorySearch(""); }}
+                     className="h-10 px-4 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs flex items-center gap-2 hover:bg-slate-50 transition-all"
+                     title="View Archive Explorer [ALT+H]"
+                  >
+                     <History className="w-4 h-4" /> View Archive <span className="opacity-40 text-[9px] font-mono">[ALT+H]</span>
                   </button>
                   <button onClick={handleSaveSession} disabled={sessionMutation.isPending || isCurrentDateSent} className={`h-10 px-6 rounded-lg font-bold text-xs flex items-center gap-2 transition-all ${isCurrentDateSent ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'}`}>
                      {sessionMutation.isPending ? <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : isCurrentDateSent ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
@@ -795,12 +990,15 @@ export default function WorkReportPage() {
                   <div className="relative w-full max-w-md h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 overflow-hidden">
                      <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
-                           <h2 className="font-bold text-slate-800 underline decoration-blue-500 underline-offset-4">Audit Archive</h2>
+                           <h2 className="font-bold text-slate-800 underline decoration-blue-500 underline-offset-4 tracking-tight">Audit Archive</h2>
                            <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full border border-blue-100">
                               {filteredHistory.length} {filteredHistory.length === 1 ? 'Record' : 'Records'}
                            </span>
                         </div>
-                        <button type="button" onClick={() => setIsHistoryOpen(false)} className="p-1.5 text-slate-400 hover:bg-slate-50 rounded-lg"><X className="w-5 h-5" /></button>
+                        <div className="flex items-center gap-1.5">
+                           <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">ESC</span>
+                           <button type="button" onClick={() => setIsHistoryOpen(false)} className="p-1.5 text-slate-400 hover:bg-slate-50 rounded-lg" title="Close Archive [ESC]"><X className="w-5 h-5" /></button>
+                        </div>
                      </div>
 
                      {/* 🔍 SEARCH / FILTER BAR */}
@@ -808,10 +1006,21 @@ export default function WorkReportPage() {
                         <div className="relative flex items-center">
                            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
                            <input
+                              ref={historySearchInputRef}
                               type="text"
                               placeholder="Filter by date (e.g. 10/10/2026)..."
                               value={historySearch}
                               onChange={(e) => setHistorySearch(e.target.value)}
+                              onKeyDown={(e) => {
+                                 if (e.key === 'Escape') {
+                                    e.stopPropagation();
+                                    if (historySearch) {
+                                       setHistorySearch("");
+                                    } else {
+                                       setIsHistoryOpen(false);
+                                    }
+                                 }
+                              }}
                               className="w-full pl-10 pr-9 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-slate-700 placeholder:text-slate-400 font-medium transition-all shadow-2xs"
                            />
                            {historySearch && (
@@ -828,8 +1037,16 @@ export default function WorkReportPage() {
                               {historySearch ? "NO MATCHING RECORDS" : "NO RECORDS FOUND"}
                            </div>
                         ) : (
-                           paginatedHistory.map((h: any) => (
-                              <div key={h.workLogId} className="p-3 border border-slate-200 rounded-xl hover:border-blue-300 transition-all space-y-2.5 shadow-xs hover:shadow-md relative overflow-hidden bg-white">
+                           paginatedHistory.map((h: any, rIdx: number) => {
+                              const isSelected = selectedHistoryIndex === rIdx;
+                              return (
+                              <div
+                                 key={h.workLogId}
+                                 onClick={() => setSelectedHistoryIndex(rIdx)}
+                                 className={`p-3 border rounded-xl transition-all space-y-2.5 shadow-xs hover:shadow-md relative overflow-hidden bg-white cursor-pointer ${
+                                    isSelected ? 'border-blue-500 ring-2 ring-blue-100 shadow-sm' : 'border-slate-200 hover:border-slate-300'
+                                 }`}
+                              >
                                  {/* 📧 EMAIL STATUS INDICATOR */}
                                  {h.isEmailSent && (
                                     <div className="absolute top-0 right-0">
@@ -850,16 +1067,32 @@ export default function WorkReportPage() {
                                           <Clock className="w-3.5 h-3.5 text-blue-500" />
                                           <span className="text-slate-400 font-medium text-[10px]">({h.durationDual?.standard || "0h 0m"})</span>
                                        </span>
+                                       {isSelected && (
+                                          <span className="text-[9px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200/60 ml-1">
+                                             Selected
+                                          </span>
+                                       )}
                                     </div>
                                     {!h.isEmailSent && (
-                                       <div className="flex gap-1.5">
+                                       <div className="flex gap-1.5 items-center">
                                           {canEdit && (
-                                             <button type="button" onClick={() => loadSessionForEdit(h.workDate.split('T')[0])} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all" title="Edit Audit"><Edit2 className="w-3.5 h-3.5" /></button>
+                                             <button
+                                                type="button"
+                                                onClick={(e) => { e.stopPropagation(); loadSessionForEdit(h.workDate.split('T')[0]); }}
+                                                className={`p-1.5 rounded-lg transition-all flex items-center gap-1 ${
+                                                   isSelected ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-xs' : 'bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white'
+                                                }`}
+                                                title="Edit Audit [E]"
+                                             >
+                                                <Edit2 className="w-3.5 h-3.5" />
+                                                {isSelected && <span className="text-[9px] font-mono font-bold">E</span>}
+                                             </button>
                                           )}
                                           {canDelete && (
                                              <button
                                                 type="button"
-                                                onClick={() => {
+                                                onClick={(e) => {
+                                                   e.stopPropagation();
                                                    confirm({
                                                       title: "Delete Audit?",
                                                       message: "Are you sure you want to delete this daily audit permanently?",
@@ -867,10 +1100,13 @@ export default function WorkReportPage() {
                                                       onConfirm: () => deleteSessionMutation.mutate(h.workDate.split('T')[0])
                                                    });
                                                 }}
-                                                className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all"
-                                                title="Delete Audit"
+                                                className={`p-1.5 rounded-lg transition-all flex items-center gap-1 ${
+                                                   isSelected ? 'bg-red-600 text-white hover:bg-red-700 shadow-xs' : 'bg-red-50 text-red-600 hover:bg-red-600 hover:text-white'
+                                                }`}
+                                                title="Delete Audit [DEL]"
                                              >
                                                 <Trash2 className="w-3.5 h-3.5" />
+                                                {isSelected && <span className="text-[9px] font-mono font-bold">DEL</span>}
                                              </button>
                                           )}
                                        </div>
@@ -879,21 +1115,24 @@ export default function WorkReportPage() {
                                  <div className="flex gap-2 pt-0.5">
                                     <button
                                        type="button"
-                                       onClick={() => previewEmailMutation.mutate(h.workLogId)}
+                                       onClick={(e) => { e.stopPropagation(); previewEmailMutation.mutate(h.workLogId); }}
                                        disabled={previewEmailMutation.isPending}
-                                       className="flex-1 py-1.5 bg-slate-100 text-slate-700 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                       className="flex-1 py-1.5 bg-slate-100 text-slate-700 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                       title="View Mail [V]"
                                     >
                                        {previewEmailMutation.isPending && previewEmailMutation.variables === h.workLogId ? (
                                           <div className="w-3.5 h-3.5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
                                        ) : (
                                           <Eye className="w-3.5 h-3.5 text-slate-500" />
                                        )}
-                                       View Mail
+                                       <span>View Mail</span>
+                                       {isSelected && <span className="text-[9px] font-mono font-bold text-slate-600 bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-2xs">V</span>}
                                     </button>
                                     {!h.isEmailSent && (
                                        <button
                                           type="button"
-                                          onClick={() => {
+                                          onClick={(e) => {
+                                             e.stopPropagation();
                                              confirm({
                                                 title: "Send Mail?",
                                                 message: "Are you sure you want to send mail?",
@@ -904,20 +1143,50 @@ export default function WorkReportPage() {
                                              });
                                           }}
                                           disabled={sendEmailMutation.isPending}
-                                          className="flex-1 py-1.5 bg-slate-800 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                          className="flex-1 py-1.5 bg-slate-800 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                          title="Send Mail [M]"
                                        >
                                           {sendEmailMutation.isPending && sendEmailMutation.variables === h.workLogId ? (
                                              <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                                           ) : (
                                              <Mail className="w-3.5 h-3.5 text-blue-400" />
                                           )}
-                                          Send Mail
+                                          <span>Send Mail</span>
+                                          {isSelected && <span className="text-[9px] font-mono font-bold text-blue-200 bg-slate-700 px-1.5 py-0.5 rounded border border-slate-600 shadow-2xs">M</span>}
                                        </button>
                                     )}
                                  </div>
                               </div>
-                           ))
+                              );
+                           })
                         )}
+                     </div>
+
+                     {/* ⌨️ KEYBOARD SHORTCUT HELPER BAR */}
+                     <div className="px-5 py-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 select-none overflow-x-auto no-scrollbar">
+                        <div className="flex items-center gap-2">
+                           <span className="flex items-center gap-1 font-medium">
+                              <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-mono shadow-2xs font-bold text-slate-700">↑/↓</kbd> Select
+                           </span>
+                           <span className="flex items-center gap-1 font-medium">
+                              <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-mono shadow-2xs font-bold text-blue-600">E</kbd> Edit
+                           </span>
+                           <span className="flex items-center gap-1 font-medium">
+                              <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-mono shadow-2xs font-bold text-red-600">DEL</kbd> Delete
+                           </span>
+                           <span className="flex items-center gap-1 font-medium">
+                              <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-mono shadow-2xs font-bold text-slate-700">V</kbd> View
+                           </span>
+                           <span className="flex items-center gap-1 font-medium">
+                              <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-mono shadow-2xs font-bold text-indigo-600">M</kbd> Send
+                           </span>
+                           <span className="flex items-center gap-1 font-medium">
+                              <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-mono shadow-2xs font-bold text-slate-700">←/→</kbd> Page
+                           </span>
+                        </div>
+                        <span className="flex items-center gap-1 font-medium">
+                           <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-mono shadow-2xs font-bold text-slate-700">/</kbd> Filter
+                        </span>
                      </div>
 
                      {/* 📄 PAGINATION FOOTER */}
