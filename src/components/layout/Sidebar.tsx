@@ -87,21 +87,69 @@ export const Sidebar = () => {
     return "/" + ctrl.replace("master", "");
   };
 
-  const NavItem = ({ item, depth = 0 }: { item: MenuItem; depth?: number }) => {
+  // Coordinated accordion: only one top-level menu open at a time
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+
+  const isItemOrChildActive = useMemo(() => {
+    const checkActive = (item: MenuItem, currentPath: string): boolean => {
+      if (getPath(item) === currentPath) return true;
+      if (item.subMenus && item.subMenus.length > 0) {
+        return item.subMenus.some((child) => checkActive(child, currentPath));
+      }
+      return false;
+    };
+    return checkActive;
+  }, []);
+
+  // Sync open menu with active route on load or route change
+  useEffect(() => {
+    if (!menuData || menuData.length === 0) return;
+    const activeRoot = menuData.find((item: MenuItem) =>
+      item.subMenus && item.subMenus.length > 0 && isItemOrChildActive(item, pathname)
+    );
+    if (activeRoot) {
+      setOpenMenuId(activeRoot.moduleId);
+    }
+  }, [pathname, menuData, isItemOrChildActive]);
+
+  const handleToggleRoot = (id: number) => {
+    setOpenMenuId((current) => (current === id ? null : id));
+  };
+
+  interface NavItemProps {
+    item: MenuItem;
+    depth?: number;
+    isOpen?: boolean;
+    onToggle?: (id: number) => void;
+  }
+
+  const NavItem = ({ item, depth = 0, isOpen = false, onToggle }: NavItemProps) => {
     const hasChildren = item.subMenus && item.subMenus.length > 0;
     const path = getPath(item);
     const isCurrent = pathname === path;
     const isChildActive = useMemo(() =>
-      hasChildren && item.subMenus.some(child => pathname === getPath(child)),
+      hasChildren && item.subMenus.some((child) => isItemOrChildActive(child, pathname)),
       [hasChildren, item.subMenus, pathname]
     );
 
-    const [isOpen, setIsOpen] = useState(isChildActive);
+    // If depth > 0 has children, coordinate nested sub-menus too
+    const [openSubId, setOpenSubId] = useState<number | null>(null);
+    useEffect(() => {
+      if (hasChildren && depth > 0) {
+        const activeSub = item.subMenus.find((child) => isItemOrChildActive(child, pathname));
+        if (activeSub) {
+          setOpenSubId(activeSub.moduleId);
+        }
+      }
+    }, [hasChildren, depth, item.subMenus, pathname]);
+
     const IconComponent = getIcon(item.icon);
 
     const handleClick = () => {
       if (hasChildren) {
-        setIsOpen(!isOpen);
+        if (onToggle) {
+          onToggle(item.moduleId);
+        }
       } else {
         router.push(path);
         closeMobileSidebar();
@@ -112,23 +160,28 @@ export const Sidebar = () => {
       <div className="w-full">
         <div
           className={cn(
-            "w-full px-3 py-2.5 flex items-center justify-between rounded-lg transition-colors cursor-pointer group mb-1 touch-manipulation",
-            isCurrent ? "bg-primary/5 text-primary" : "text-slate-600 hover:bg-slate-50",
-            (isChildActive && !isCurrent) && "text-primary font-bold",
+            "w-full px-3 py-2.5 flex items-center justify-between rounded-lg transition-all duration-200 cursor-pointer group mb-1 touch-manipulation select-none active:scale-[0.99]",
+            isCurrent
+              ? "bg-primary/10 text-primary font-bold shadow-xs"
+              : isChildActive
+              ? "text-primary font-bold bg-primary/5"
+              : isOpen
+              ? "text-slate-900 bg-slate-50/80 font-semibold"
+              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
           )}
           onClick={handleClick}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div className={cn(
-              "transition-colors",
-              (isCurrent || isChildActive) ? "text-primary" : "text-slate-400 group-hover:text-primary"
+              "transition-colors shrink-0",
+              (isCurrent || isChildActive) ? "text-primary" : isOpen ? "text-primary" : "text-slate-400 group-hover:text-primary"
             )}>
               <IconComponent className={cn(depth > 0 ? "w-3.5 h-3.5" : "w-4 h-4")} />
             </div>
             <span className={cn(
-              "tracking-tight",
+              "tracking-tight truncate",
               depth > 0 ? "text-[12.5px]" : "text-sm",
-              isCurrent ? "font-bold" : "font-medium"
+              isCurrent ? "font-bold" : (isChildActive || isOpen) ? "font-semibold" : "font-medium"
             )}>
               {item.name.replace("Dally", "Daily")}
             </span>
@@ -136,20 +189,35 @@ export const Sidebar = () => {
           {hasChildren && (
             <ChevronRight
               className={cn(
-                "w-3.5 h-3.5 transition-transform duration-300 text-slate-400",
-                isOpen && "rotate-90"
+                "w-3.5 h-3.5 transition-transform duration-300 text-slate-400 group-hover:text-slate-600 shrink-0 ml-1.5",
+                isOpen && "rotate-90 text-primary group-hover:text-primary"
               )}
             />
           )}
         </div>
 
-        {hasChildren && isOpen && (
-          <div className="flex flex-col ml-5 pl-1 border-l border-slate-100 mt-1 mb-2 animate-in fade-in duration-300">
-            {item.subMenus
-              .sort((a, b) => a.displayOrder - b.displayOrder)
-              .map((sub) => (
-                <NavItem key={sub.moduleId} item={sub} depth={depth + 1} />
-              ))}
+        {hasChildren && (
+          <div
+            className={cn(
+              "grid transition-all duration-300 ease-in-out",
+              isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 pointer-events-none"
+            )}
+          >
+            <div className="overflow-hidden">
+              <div className="flex flex-col ml-5 pl-1 border-l border-slate-100 mt-0.5 mb-2 space-y-0.5">
+                {item.subMenus
+                  .sort((a, b) => a.displayOrder - b.displayOrder)
+                  .map((sub) => (
+                    <NavItem
+                      key={sub.moduleId}
+                      item={sub}
+                      depth={depth + 1}
+                      isOpen={openSubId === sub.moduleId}
+                      onToggle={(subId) => setOpenSubId((prev) => (prev === subId ? null : subId))}
+                    />
+                  ))}
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -206,7 +274,13 @@ export const Sidebar = () => {
           ) : menuData
             .sort((a: MenuItem, b: MenuItem) => a.displayOrder - b.displayOrder)
             .map((item: MenuItem) => (
-              <NavItem key={item.moduleId} item={item} />
+              <NavItem
+                key={item.moduleId}
+                item={item}
+                depth={0}
+                isOpen={openMenuId === item.moduleId}
+                onToggle={handleToggleRoot}
+              />
             ))}
         </nav>
       </aside>
