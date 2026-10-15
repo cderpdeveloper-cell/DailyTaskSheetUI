@@ -55,31 +55,31 @@ export const ConfirmDialog = () => {
   const isDanger = options.variant === "danger";
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4">
       <div 
         className="absolute inset-0 bg-black/50 animate-in fade-in duration-300"
         onClick={handleCancel}
       />
       <div className="relative w-full max-w-sm bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden animate-in zoom-in-95 slide-in-from-top-4 duration-300">
-        <div className="p-6">
-          <div className="flex flex-col items-center text-center gap-4">
+        <div className="p-4 sm:p-6">
+          <div className="flex flex-col items-center text-center gap-3 sm:gap-4">
             <div className={cn(
-              "w-14 h-14 rounded-full flex items-center justify-center shrink-0",
+              "w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center shrink-0",
               isDanger ? "bg-red-50 text-red-500" : "bg-blue-50 text-blue-500"
             )}>
-              {isDanger ? <Trash2 className="w-7 h-7" /> : <AlertCircle className="w-7 h-7" />}
+              {isDanger ? <Trash2 className="w-6 h-6 sm:w-7 sm:h-7" /> : <AlertCircle className="w-6 h-6 sm:w-7 sm:h-7" />}
             </div>
             <div className="space-y-1">
-              <h3 className="text-lg font-bold text-gray-900 tracking-tight">
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 tracking-tight">
                 {options.title}
               </h3>
-              <p className="text-sm text-gray-500 font-medium leading-relaxed">
+              <p className="text-xs sm:text-sm text-gray-500 font-medium leading-relaxed">
                 {options.message}
               </p>
             </div>
           </div>
 
-          <div className="mt-8 flex items-center justify-center gap-3 pt-4 border-t border-gray-50">
+          <div className="mt-6 sm:mt-8 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-center gap-2 sm:gap-3 pt-4 border-t border-gray-50">
             <Button 
               variant="outline" 
               onClick={handleCancel}

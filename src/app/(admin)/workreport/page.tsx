@@ -724,42 +724,45 @@ export default function WorkReportPage() {
       <div className="flex flex-col gap-6 font-sans pb-10 animate-in fade-in duration-500">
 
          {/* 🟢 TOP NAV - FLOATING CARD */}
-         <div className="w-full bg-white/90 backdrop-blur-md border border-slate-200 shadow-sm rounded-2xl sticky top-2 z-[30]">
-            <div className="px-6 h-16 flex items-center justify-between">
-               <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white"><FileText className="w-5 h-5" /></div>
-                  <h1 className="text-lg font-bold text-slate-800">WorkLog Dashboard</h1>
+         <div className="w-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-sm rounded-2xl sticky top-2 z-[30] p-3 sm:px-6 sm:py-3.5">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+               <div className="flex items-center gap-2.5 sm:gap-3">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white shrink-0"><FileText className="w-4 h-4 sm:w-5 sm:h-5" /></div>
+                  <div>
+                     <h1 className="text-base sm:text-lg font-bold text-slate-800 leading-tight">WorkLog Dashboard</h1>
+                     <p className="text-[10px] text-slate-400 font-medium sm:hidden">Daily Work Report</p>
+                  </div>
                </div>
 
-               <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 bg-slate-100 h-10 px-4 rounded-lg border border-slate-200">
-                     <Calendar className="w-4 h-4 text-slate-500" />
+               <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 bg-slate-100 h-9 sm:h-10 px-2.5 sm:px-4 rounded-lg border border-slate-200">
+                     <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 shrink-0" />
                      <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="bg-transparent border-none focus:ring-0 text-xs font-bold text-slate-700 outline-none uppercase" />
                   </div>
                   <button
                      onClick={() => { setIsHistoryOpen(true); setHistoryPage(1); setHistorySearch(""); }}
-                     className="h-10 px-4 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs flex items-center gap-2 hover:bg-slate-50 transition-all"
+                     className="h-9 sm:h-10 px-2.5 sm:px-4 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs flex items-center gap-1.5 sm:gap-2 hover:bg-slate-50 transition-all touch-manipulation"
                      title="View Archive Explorer [ALT+H]"
                   >
-                     <History className="w-4 h-4" /> View Archive <span className="opacity-40 text-[9px] font-mono">[ALT+H]</span>
+                     <History className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span>Archive</span> <span className="hidden sm:inline opacity-40 text-[9px] font-mono">[ALT+H]</span>
                   </button>
-                  <button onClick={handleSaveSession} disabled={sessionMutation.isPending || isCurrentDateSent} className={`h-10 px-6 rounded-lg font-bold text-xs flex items-center gap-2 transition-all ${isCurrentDateSent ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'}`}>
-                     {sessionMutation.isPending ? <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : isCurrentDateSent ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-                     {isCurrentDateSent ? 'Report Sent' : 'Save Changes'} {!isCurrentDateSent && <span className="opacity-40 ml-1 text-[9px]">[CTRL+S]</span>}
+                  <button onClick={handleSaveSession} disabled={sessionMutation.isPending || isCurrentDateSent} className={`h-9 sm:h-10 px-4 sm:px-6 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all flex-1 sm:flex-none touch-manipulation ${isCurrentDateSent ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'}`}>
+                     {sessionMutation.isPending ? <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : isCurrentDateSent ? <CheckCircle className="w-4 h-4" /> : <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                     <span>{isCurrentDateSent ? 'Report Sent' : 'Save Changes'}</span> {!isCurrentDateSent && <span className="hidden sm:inline opacity-40 ml-1 text-[9px]">[CTRL+S]</span>}
                   </button>
                </div>
             </div>
          </div>
 
-         <div className="w-full space-y-6">
+         <div className="w-full space-y-4 sm:space-y-6">
 
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                <div>
-                  <h2 className="text-xl font-bold text-slate-800">Daily Task Sheet</h2>
+                  <h2 className="text-lg sm:text-xl font-bold text-slate-800">Daily Task Sheet</h2>
                </div>
                {canCreate && !isCurrentDateSent && (
-                  <button onClick={addClientSession} className="h-10 px-5 bg-slate-800 text-white rounded-lg font-bold text-xs flex items-center gap-3 hover:bg-slate-900 transition-all active:scale-95">
-                     <Plus className="w-4 h-4" /> Add Entry <span className="opacity-40 text-[9px] font-mono">[ALT+N]</span>
+                  <button onClick={addClientSession} className="h-9 sm:h-10 px-4 sm:px-5 bg-slate-800 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-2 sm:gap-3 hover:bg-slate-900 transition-all active:scale-95 touch-manipulation">
+                     <Plus className="w-4 h-4" /> Add Entry <span className="hidden sm:inline opacity-40 text-[9px] font-mono">[ALT+N]</span>
                   </button>
                )}
             </div>
@@ -788,12 +791,12 @@ export default function WorkReportPage() {
                         {/* COLLAPSED HEADER / SUMMARY TIER */}
                         <div
                            onClick={() => setExpandedIndex(isExpanded ? null : logIdx)}
-                           className={`flex items-center justify-between px-6 py-4 cursor-pointer select-none transition-colors rounded-t-lg ${!isExpanded ? 'bg-white' : 'bg-slate-50 border-b border-slate-100'}`}
+                           className={`flex items-center justify-between p-3.5 sm:px-6 sm:py-4 cursor-pointer select-none transition-colors rounded-t-lg gap-2 ${!isExpanded ? 'bg-white' : 'bg-slate-50 border-b border-slate-100'}`}
                         >
-                           <div className="flex items-center gap-4 flex-1">
+                           <div className="flex items-center gap-2.5 sm:gap-4 flex-1 min-w-0">
                               {!isExpanded && (
                                  <div
-                                    className="text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing px-2 -ml-2"
+                                    className="text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing px-1 sm:px-2 -ml-1 sm:-ml-2 shrink-0 hidden sm:block"
                                     title="Drag to reorder"
                                     onMouseEnter={() => setDragEnabledIndex(logIdx)}
                                     onMouseLeave={() => setDragEnabledIndex(null)}
@@ -802,22 +805,22 @@ export default function WorkReportPage() {
                                     <GripVertical className="w-5 h-5" />
                                  </div>
                               )}
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${isExpanded ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'}`}>#{logIdx + 1}</div>
+                              <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${isExpanded ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'}`}>#{logIdx + 1}</div>
                               {!isExpanded ? (
-                                 <div className="flex items-center gap-4 text-xs">
-                                    <span className="font-bold text-slate-700 uppercase tracking-wide">{clientName}</span>
-                                    <span className="text-slate-200">|</span>
-                                    <span className="text-slate-500 italic">{projectName}</span>
-                                    <span className="text-slate-200">|</span>
-                                    <div className="flex items-center gap-1.2 text-slate-400"><Clock className="w-3 h-3" /> {log.inputTime}h</div>
+                                 <div className="flex flex-wrap items-center gap-1.5 sm:gap-3 text-xs min-w-0">
+                                    <span className="font-bold text-slate-700 uppercase tracking-wide truncate max-w-[130px] sm:max-w-xs">{clientName}</span>
+                                    <span className="text-slate-300 hidden sm:inline">|</span>
+                                    <span className="text-slate-500 italic truncate max-w-[110px] sm:max-w-none text-[11px] sm:text-xs">{projectName}</span>
+                                    <span className="text-slate-300 hidden sm:inline">|</span>
+                                    <div className="flex items-center gap-1 text-slate-400 text-[11px] sm:text-xs shrink-0"><Clock className="w-3.5 h-3.5" /> {log.inputTime}h</div>
                                  </div>
                               ) : (
-                                 <h3 className="font-bold text-slate-700 text-sm italic tracking-tight">Main Entry Mapping (Session #{logIdx + 1})</h3>
+                                 <h3 className="font-bold text-slate-700 text-xs sm:text-sm italic tracking-tight truncate">Main Entry Mapping (Session #{logIdx + 1})</h3>
                               )}
                            </div>
-                           <div className="flex items-center gap-4">
+                           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
                               {logs.length > 1 && !isExpanded && (
-                                 <button onClick={(e) => { e.stopPropagation(); removeClientSession(logIdx); }} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                 <button onClick={(e) => { e.stopPropagation(); removeClientSession(logIdx); }} className="text-slate-300 hover:text-red-500 transition-colors p-1" aria-label="Delete Session"><Trash2 className="w-4 h-4" /></button>
                               )}
                               {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
                            </div>
@@ -825,13 +828,13 @@ export default function WorkReportPage() {
 
                         {/* FULL EDIT VIEW (VISIBLE WHEN EXPANDED) */}
                         {isExpanded && (
-                           <div className="flex flex-col lg:flex-row bg-white border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                           <div className="flex flex-col xl:flex-row bg-white border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
 
                               {/* 📝 FORM SECTION (LEFT) */}
-                              <div className="flex-[1.2] p-5 space-y-4 border-r border-slate-200">
+                              <div className="flex-[1.2] p-3.5 sm:p-5 space-y-4 border-b xl:border-b-0 xl:border-r border-slate-200">
 
-                                 {/* Shrink Client/Project into a single row */}
-                                 <div className="grid grid-cols-2 gap-3">
+                                 {/* Client & Project row */}
+                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div className="space-y-1">
                                        <label className="text-[11px] font-bold text-slate-500 ml-1 uppercase tracking-tight">Client Profile</label>
                                        <SimpleSearchSelect
@@ -855,7 +858,7 @@ export default function WorkReportPage() {
                                  </div>
 
                                  {/* Twin Card Rows */}
-                                 <div className="grid grid-cols-2 gap-3">
+                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {/* Main Status Card */}
                                     <div className="p-3 bg-slate-50/50 border border-slate-200 rounded-xl space-y-1.5">
                                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Main Status</label>
@@ -950,17 +953,17 @@ export default function WorkReportPage() {
                                           </div>
                                        </div>
                                     ) : (
-                                       <div className="hidden lg:block" />
+                                       <div className="hidden sm:block" />
                                     )}
                                  </div>
                               </div>
 
                               {/* ⚡ ACTIVITIES SECTION (RIGHT) */}
-                              <div className="flex-1 p-5 bg-white flex flex-col">
+                              <div className="flex-1 p-3.5 sm:p-5 bg-white flex flex-col">
                                  <div className="flex items-center justify-between mb-4">
-                                    <h4 className="text-lg font-bold text-slate-800">Activities</h4>
-                                    <button onClick={() => addSubActivity(logIdx)} className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1">
-                                       <Plus className="w-3.5 h-3.5" /> Append <span className="opacity-40 text-[9px] font-mono">[ALT+A]</span>
+                                    <h4 className="text-base sm:text-lg font-bold text-slate-800">Activities</h4>
+                                    <button onClick={() => addSubActivity(logIdx)} className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 touch-manipulation">
+                                       <Plus className="w-3.5 h-3.5" /> Append <span className="hidden sm:inline opacity-40 text-[9px] font-mono">[ALT+A]</span>
                                     </button>
                                  </div>
 
@@ -974,7 +977,7 @@ export default function WorkReportPage() {
                                                 value={task.description}
                                                 onChange={(e) => updateActivityParam(logIdx, tIdx, 'description', e.target.value)}
                                                 placeholder="Elaborate on work performed..."
-                                                className="w-full h-60 p-3 bg-white border-none text-sm text-slate-700 focus:ring-0 outline-none resize-none placeholder:text-slate-300 leading-relaxed"
+                                                className="w-full h-36 sm:h-60 p-3 bg-white border-none text-xs sm:text-sm text-slate-700 focus:ring-0 outline-none resize-none placeholder:text-slate-300 leading-relaxed"
                                              />
                                           </div>
 
@@ -1189,7 +1192,7 @@ export default function WorkReportPage() {
                      </div>
 
                      {/* ⌨️ KEYBOARD SHORTCUT HELPER BAR */}
-                     <div className="px-5 py-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 select-none overflow-x-auto no-scrollbar">
+                     <div className="hidden sm:flex px-5 py-2 bg-slate-50 border-t border-slate-100 items-center justify-between text-[10px] text-slate-500 select-none overflow-x-auto no-scrollbar">
                         <div className="flex items-center gap-2">
                            <span className="flex items-center gap-1 font-medium">
                               <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-mono shadow-2xs font-bold text-slate-700">↑/↓</kbd> Select

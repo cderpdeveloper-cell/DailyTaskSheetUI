@@ -35,24 +35,24 @@ export const PatchNotesModal = () => {
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="" size="3xl" bodyClassName="p-0" hideHeader={true}>
-      <div className="relative overflow-hidden rounded-2xl bg-white min-h-[540px] border border-slate-100 shadow-2xl">
+      <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-100 shadow-2xl">
         {/* Premium Header */}
-        <div className="relative h-44 bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 overflow-hidden flex items-center px-10 text-left">
+        <div className="relative min-h-[140px] sm:h-44 bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 overflow-hidden flex items-center p-4 sm:px-10 text-left">
           <div className="absolute inset-0 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px] opacity-20"></div>
           <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/15 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2"></div>
 
-          <div className="relative z-10 flex items-center gap-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-indigo-500/40 ring-4 ring-indigo-500/20">
-              <Sparkles className="w-8 h-8" />
+          <div className="relative z-10 flex items-center gap-3.5 sm:gap-6 pr-8">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 shrink-0 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-indigo-500/40 ring-4 ring-indigo-500/20">
+              <Sparkles className="w-6 h-6 sm:w-8 sm:h-8" />
             </div>
             <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-black text-white tracking-tight uppercase">Release Notes</h1>
-                <span className="px-3 py-1 bg-gradient-to-r from-indigo-500 to-blue-500 text-white text-[11px] font-black rounded-md uppercase tracking-widest ring-1 ring-white/20 shadow-sm">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <h1 className="text-xl sm:text-3xl font-black text-white tracking-tight uppercase">Release Notes</h1>
+                <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 bg-gradient-to-r from-indigo-500 to-blue-500 text-white text-[10px] sm:text-[11px] font-black rounded-md uppercase tracking-widest ring-1 ring-white/20 shadow-sm">
                   v{PATCH_VERSION}
                 </span>
               </div>
-              <p className="text-indigo-200/80 font-medium mt-1 text-sm">
+              <p className="text-indigo-200/80 font-medium mt-1 text-xs sm:text-sm">
                 Unified System Messaging, Smart Email Actions, & Keyboard Shortcuts
               </p>
             </div>
@@ -60,15 +60,15 @@ export const PatchNotesModal = () => {
 
           <button
             onClick={handleClose}
-            className="absolute top-6 right-6 p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+            className="absolute top-3.5 right-3.5 sm:top-6 sm:right-6 p-1.5 sm:p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-all"
             aria-label="Close"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
 
         {/* Content Area */}
-        <div className="p-8 space-y-6 max-h-[500px] overflow-y-auto custom-scrollbar text-left">
+        <div className="p-4 sm:p-8 space-y-4 sm:space-y-6 max-h-[60vh] sm:max-h-[500px] overflow-y-auto custom-scrollbar text-left">
           <div className="space-y-4">
             <div className="flex items-center gap-2.5">
               <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600">
@@ -161,8 +161,8 @@ export const PatchNotesModal = () => {
         </div>
 
         {/* Footer */}
-        <div className="p-6 px-8 border-t border-slate-100 flex items-center justify-between bg-slate-50/60">
-          <div className="flex items-center gap-2">
+        <div className="p-4 sm:p-6 sm:px-8 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/60">
+          <div className="flex items-center gap-2 justify-center sm:justify-start">
             <Coffee className="w-4 h-4 text-slate-400" />
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
               DailyTaskSheet Engine v{PATCH_VERSION}
@@ -170,7 +170,7 @@ export const PatchNotesModal = () => {
           </div>
           <button
             onClick={handleClose}
-            className="px-8 py-2.5 bg-slate-900 text-white text-xs font-black uppercase tracking-[0.15em] rounded-xl hover:bg-slate-800 transition-all hover:shadow-md active:scale-98"
+            className="w-full sm:w-auto px-8 py-2.5 bg-slate-900 text-white text-xs font-black uppercase tracking-[0.15em] rounded-xl hover:bg-slate-800 transition-all hover:shadow-md active:scale-98 text-center"
           >
             Got it, Let's go!
           </button>

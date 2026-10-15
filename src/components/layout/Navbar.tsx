@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { ChevronDown, LogOut } from "lucide-react";
+import { ChevronDown, LogOut, Menu } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useSidebarStore } from "@/store/useSidebarStore";
 import { cn } from "@/utils/cn";
 
 export const Navbar = () => {
   const { user, logout } = useAuthStore();
+  const { toggle: toggleSidebar } = useSidebarStore();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -37,8 +39,21 @@ export const Navbar = () => {
   }, [isMenuOpen]);
 
   return (
-    <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-6 sticky top-0 z-40 shadow-sm">
-      <div className="flex items-center gap-4 flex-1">
+    <header className="h-16 bg-white/90 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-3 sm:px-6 sticky top-0 z-40 shadow-xs">
+      <div className="flex items-center gap-3 flex-1">
+        {/* Mobile & Tablet Sidebar Hamburger Trigger */}
+        <button
+          onClick={toggleSidebar}
+          className="p-2 -ml-1 text-slate-600 hover:text-primary hover:bg-slate-100 rounded-lg lg:hidden transition-colors touch-manipulation"
+          aria-label="Toggle Navigation Menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        {/* Small brand mark for mobile when sidebar is closed */}
+        <div className="lg:hidden flex items-center gap-1.5 font-bold text-slate-800 text-sm">
+          <span>Daily<span className="text-primary font-black">Work</span></span>
+        </div>
       </div>
 
       <div className="flex items-center gap-4 relative" ref={menuRef}>

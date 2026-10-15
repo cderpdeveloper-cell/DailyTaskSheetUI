@@ -111,25 +111,25 @@ export default function CompanyProfilePage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-2.5 sm:gap-3">
              <Building className="w-8 h-8 text-primary" />
              Company Profile
           </h1>
           <p className="text-gray-500 mt-1 font-medium italic">Manage your organization's core information.</p>
         </div>
         {canEdit && (
-          <Button onClick={handleSubmit(onSubmit)} className="gap-2 px-6 shadow-xl shadow-primary/20" isLoading={mutation.isPending}>
+          <Button onClick={handleSubmit(onSubmit)} className="gap-2 px-6 shadow-xl shadow-primary/20 w-full sm:w-auto justify-center" isLoading={mutation.isPending}>
             <Save className="w-5 h-5" />
             Update Settings
           </Button>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
         <div className="md:col-span-1 space-y-6">
-          <div className="glass-card p-8 flex flex-col items-center justify-center text-center space-y-4">
+          <div className="glass-card p-5 sm:p-8 flex flex-col items-center justify-center text-center space-y-4">
             <div className="relative group p-1 rounded-full ring ring-primary ring-offset-2 overflow-hidden bg-gray-50 flex items-center justify-center">
               {logoPreview ? (
                 <img 
@@ -146,7 +146,7 @@ export default function CompanyProfilePage() {
                 <>
                   <label 
                     htmlFor="logo-upload" 
-                    className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] py-2 cursor-pointer opacity-0 group-hover:opacity-100 transition-all uppercase tracking-widest font-bold font-mono"
+                    className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] py-2 cursor-pointer opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all uppercase tracking-widest font-bold font-mono"
                   >
                     Change Logo
                   </label>
@@ -168,13 +168,13 @@ export default function CompanyProfilePage() {
           </div>
         </div>
 
-        <div className="md:col-span-2 glass-card p-8 space-y-6">
+        <div className="lg:col-span-2 glass-card p-4 sm:p-8 space-y-6">
           <h3 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
                General Information
           </h3>
           
-          <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
+          <form className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            <div className="sm:col-span-2">
                 <Input
                     {...register("companyName")}
                     label="Company Name"

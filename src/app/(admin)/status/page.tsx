@@ -121,9 +121,9 @@ export default function StatusMasterPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-2.5 sm:gap-3">
             <Tag className="w-8 h-8 text-primary" />
             Status Management
           </h1>
@@ -131,7 +131,7 @@ export default function StatusMasterPage() {
         </div>
 
         {canCreate && (
-          <Button onClick={handleOpenAdd} className="gap-2 px-6 shadow-xl shadow-primary/20">
+          <Button onClick={handleOpenAdd} className="gap-2 px-6 shadow-xl shadow-primary/20 w-full sm:w-auto justify-center">
             <Plus className="w-5 h-5" />
             Create New Status
           </Button>
@@ -156,9 +156,9 @@ export default function StatusMasterPage() {
           {[1, 2, 3].map(i => <div key={i} className="h-24 bg-gray-100 animate-pulse rounded-2xl"></div>)}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {filteredStatuses.map((status) => (
-            <div key={status.statusId} className="glass-card p-4 group hover:translate-y-[-4px] transition-all duration-300 flex items-center justify-between">
+            <div key={status.statusId} className="glass-card p-3.5 sm:p-4 group hover:translate-y-[-4px] transition-all duration-300 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div
                   className="w-4 h-4 rounded-full shadow-sm"
@@ -167,7 +167,7 @@ export default function StatusMasterPage() {
                 <h3 className="font-bold text-gray-900 truncate">{status.statusName}</h3>
               </div>
               {(canEdit || canDelete) && (
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
                   {canEdit && (
                     <button onClick={() => handleEdit(status)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-primary transition-colors">
                       <Edit2 className="w-3.5 h-3.5" />

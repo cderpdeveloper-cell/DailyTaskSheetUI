@@ -127,9 +127,9 @@ export default function ProjectMasterPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-2.5 sm:gap-3">
             <Briefcase className="w-8 h-8 text-primary" />
             Project Management
           </h1>
@@ -137,7 +137,7 @@ export default function ProjectMasterPage() {
         </div>
 
         {canCreate && (
-          <Button onClick={handleOpenAdd} className="gap-2 px-6 shadow-xl shadow-primary/20">
+          <Button onClick={handleOpenAdd} className="gap-2 px-6 shadow-xl shadow-primary/20 w-full sm:w-auto justify-center">
             <Plus className="w-5 h-5" />
             Create New Project
           </Button>
@@ -158,13 +158,13 @@ export default function ProjectMasterPage() {
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {[1, 2, 3].map(i => <div key={i} className="h-48 bg-gray-100 animate-pulse rounded-2xl"></div>)}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProjects.map((project) => (
-            <div key={project.projectId} className="glass-card p-6 group hover:translate-y-[-4px] transition-all duration-300">
+            <div key={project.projectId} className="glass-card p-4 sm:p-6 group hover:translate-y-[-4px] transition-all duration-300">
               <div className="flex items-start justify-between mb-6">
                 <div
                   className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-lg ring-4 ring-white"

@@ -117,9 +117,9 @@ export default function ClientMasterPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-2.5 sm:gap-3">
             <UserCircle2 className="w-8 h-8 text-primary" />
             Client Management
           </h1>
@@ -127,7 +127,7 @@ export default function ClientMasterPage() {
         </div>
 
         {canCreate && (
-          <Button onClick={handleOpenAdd} className="gap-2 px-6 shadow-xl shadow-primary/20">
+          <Button onClick={handleOpenAdd} className="gap-2 px-6 shadow-xl shadow-primary/20 w-full sm:w-auto justify-center">
             <Plus className="w-5 h-5" />
             Register New Client
           </Button>
@@ -148,19 +148,19 @@ export default function ClientMasterPage() {
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {[1, 2, 3].map(i => <div key={i} className="h-40 bg-gray-100 animate-pulse rounded-2xl"></div>)}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredClients.map((client) => (
-            <div key={client.clientId} className="glass-card p-6 group hover:translate-y-[-4px] transition-all duration-300">
+            <div key={client.clientId} className="glass-card p-4 sm:p-6 group hover:translate-y-[-4px] transition-all duration-300">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-xl uppercase">
                   {client.clientName[0]}
                 </div>
                 {(canEdit || canDelete) && (
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
                     {canEdit && (
                       <button onClick={() => handleEdit(client)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-primary transition-colors">
                         <Edit2 className="w-4 h-4" />

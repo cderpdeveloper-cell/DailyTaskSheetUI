@@ -254,7 +254,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Grid - Visible to ALL, filtered by API */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {stats.map((stat, i) => (
           <div
             key={i}
@@ -269,7 +269,7 @@ export default function DashboardPage() {
               }, 100);
             }}
             className={cn(
-              "glass-card p-6 flex items-center gap-5 hover:translate-y-[-4px] transition-all cursor-pointer group rounded-none",
+              "glass-card p-4 sm:p-6 flex items-center gap-3.5 sm:gap-5 hover:translate-y-[-4px] transition-all cursor-pointer group rounded-none touch-manipulation",
               isStatsLoading && "animate-pulse",
               selectedStatusId === stat.id && "ring-2 ring-primary ring-offset-4 shadow-xl"
             )}
@@ -294,8 +294,8 @@ export default function DashboardPage() {
         <div id="task-details-section" className="animate-in slide-in-from-top-4 duration-700">
           <div className="bg-white rounded-none border border-gray-100 shadow-2xl shadow-gray-200/50 overflow-hidden">
             {/* Section Header - Notice Board Style */}
-            <div className="px-8 py-6 border-b border-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-center gap-6">
+            <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-50 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-3 sm:gap-6">
                 <div className="flex flex-col">
                   <h3 className="text-xl font-black text-gray-900 tracking-tight uppercase">Detailed Tasks</h3>
                   <div className="flex items-center gap-2 mt-1">
@@ -332,13 +332,13 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 w-full sm:w-auto">
                 <div className="relative group">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-primary transition-colors" />
                   <input
                     type="text"
                     placeholder="Search in results..."
-                    className="pl-10 pr-4 py-2.5 bg-gray-50 border border-transparent rounded-none text-sm font-medium focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all w-full md:w-64"
+                    className="pl-10 pr-4 py-2.5 bg-gray-50 border border-transparent rounded-none text-sm font-medium focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all w-full sm:w-64"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
@@ -354,7 +354,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Section Body */}
-            <div className="p-8">
+            <div className="p-3.5 sm:p-6 md:p-8">
               {!isTasksLoading && filteredTasks.length === 0 ? (
                 <div className="py-4 px-6 text-center bg-rose-50 rounded-none border border-rose-100 flex items-center justify-center gap-3 animate-pulse">
                   <span className="text-rose-500 font-black">✕</span>

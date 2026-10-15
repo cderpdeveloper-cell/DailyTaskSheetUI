@@ -63,7 +63,7 @@ export const Modal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4">
       <div 
         className="absolute inset-0 bg-black/50 animate-in fade-in duration-300"
         onClick={onClose}
@@ -71,17 +71,18 @@ export const Modal = ({
       <div 
         ref={modalRef}
         className={cn(
-          "relative w-full bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden outline-none animate-in zoom-in-95 slide-in-from-bottom-4 duration-300",
+          "relative w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden outline-none animate-in zoom-in-95 slide-in-from-bottom-4 duration-300",
           sizes[size]
         )}
       >
         {/* Header */}
         {!hideHeader && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white">
-            <h2 className="text-lg font-bold text-gray-900 tracking-tight">{title}</h2>
+          <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-gray-100 bg-white">
+            <h2 className="text-base sm:text-lg font-bold text-gray-900 tracking-tight truncate pr-2">{title}</h2>
             <button 
               onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-all border border-transparent hover:border-gray-200"
+              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-all border border-transparent hover:border-gray-200 shrink-0"
+              aria-label="Close Modal"
             >
               <X className="w-5 h-5" />
             </button>
@@ -91,7 +92,7 @@ export const Modal = ({
         {/* Body */}
         <div className={cn(
           "overflow-y-auto", 
-          size === "full" ? "flex-1" : (size === "xl" || size === "2xl" || size === "3xl" ? "max-h-[90vh]" : "max-h-[70vh]"),
+          size === "full" ? "flex-1" : (size === "xl" || size === "2xl" || size === "3xl" ? "max-h-[85dvh]" : "max-h-[75dvh]"),
           bodyClassName
         )}>
           {children}
@@ -99,7 +100,7 @@ export const Modal = ({
 
         {/* Footer */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-white">
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 px-4 py-3 sm:px-6 sm:py-4 border-t border-gray-100 bg-white">
             {footer}
           </div>
         )}

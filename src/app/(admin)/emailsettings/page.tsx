@@ -459,7 +459,7 @@ export default function EmailSettingsPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
             Delivery Control
@@ -467,7 +467,7 @@ export default function EmailSettingsPage() {
           <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Configure SMTP, target recipients, and dynamic email styling.</p>
         </div>
 
-        <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-100 w-fit">
+        <div className="flex flex-wrap items-center bg-white p-1 rounded-xl shadow-xs border border-slate-100 w-full sm:w-fit">
           <button
             onClick={() => setActiveTab('general')}
             className={`px-5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'general' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-600'}`}
@@ -509,7 +509,7 @@ export default function EmailSettingsPage() {
                   />
                 </div>
                 <Input {...smtpForm.register("smtpServer")} label="SMTP Server" placeholder="smtp.gmail.com" />
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                   <div className="col-span-1">
                     <Input {...smtpForm.register("port")} label="Port" type="number" />
                   </div>
@@ -579,7 +579,7 @@ export default function EmailSettingsPage() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 opacity-70">Internal Format Name</label>
                     <input {...templateForm.register("templateName")} className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-slate-800 focus:ring-0 outline-none" />
@@ -630,7 +630,7 @@ export default function EmailSettingsPage() {
 
                   <textarea
                     {...templateForm.register("bodyHtml")}
-                    className="w-full min-h-[450px] p-6 font-mono text-xs bg-slate-50 text-slate-600 rounded-xl border border-slate-200 focus:ring-1 focus:ring-slate-800 shadow-inner resize-none"
+                    className="w-full min-h-[350px] sm:min-h-[450px] p-3.5 sm:p-6 font-mono text-xs bg-slate-50 text-slate-600 rounded-xl border border-slate-200 focus:ring-1 focus:ring-slate-800 shadow-inner resize-none"
                     placeholder="<html>...</html>"
                   />
                 </div>

@@ -46,15 +46,15 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-gray-50/50">
       <Sidebar />
-      <div className="md:pl-64 flex flex-col min-h-screen">
+      <div className="lg:pl-64 flex flex-col min-h-screen">
         <Navbar />
-        <main className="p-6 flex-1">
-          <div className="max-w-6xl mx-auto space-y-6">
+        <main className="p-3 sm:p-5 md:p-6 flex-1">
+          <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6">
             {children}
           </div>
         </main>
 
-        <footer className="px-8 py-6 border-t border-gray-100 bg-white/50 backdrop-blur-sm text-center">
+        <footer className="px-4 sm:px-8 py-4 sm:py-6 border-t border-gray-100 bg-white/50 backdrop-blur-sm text-center">
           <p className="text-xs text-gray-400 font-medium">
             © 2026 DallyWorkReport. All rights reserved.
           </p>

@@ -158,9 +158,9 @@ export default function RoleMasterPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-2.5 sm:gap-3">
             <ShieldCheck className="w-8 h-8 text-primary" />
             Role Master
           </h1>
@@ -168,18 +168,18 @@ export default function RoleMasterPage() {
         </div>
 
         {canCreate && (
-          <Button onClick={() => setIsRoleModalOpen(true)} className="gap-2 px-6 shadow-xl shadow-primary/20">
+          <Button onClick={() => setIsRoleModalOpen(true)} className="gap-2 px-6 shadow-xl shadow-primary/20 w-full sm:w-auto justify-center">
             <Plus className="w-5 h-5" />
             Create New Role
           </Button>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {rolesLoading ? (
           [1, 2, 3].map(i => <div key={i} className="h-40 bg-gray-100 animate-pulse rounded-2xl"></div>)
         ) : roles.map((role) => (
-          <div key={role.roleMasterId} className="glass-card p-6 border-l-4 border-l-primary hover:translate-x-1 transition-all relative">
+          <div key={role.roleMasterId} className="glass-card p-4 sm:p-6 border-l-4 border-l-primary hover:translate-x-1 transition-all relative">
             <div className="flex justify-between items-start mb-4">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                 <ShieldCheck className="w-6 h-6" />

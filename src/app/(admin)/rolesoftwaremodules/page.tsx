@@ -93,9 +93,9 @@ export default function AccessControlPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-2.5 sm:gap-3">
             <ShieldCheck className="w-8 h-8 text-primary" />
             Access Control
           </h1>
@@ -136,31 +136,35 @@ export default function AccessControlPage() {
       {selectedRoleId > 0 ? (
         <div className="space-y-10">
           {permissions.length > 0 ? permissions.map((cat) => (
-            <div key={cat.moduleId} className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden group hover:shadow-md transition-all">
-              <div className="bg-gray-50/50 px-8 py-5 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="text-xl font-black text-gray-900 tracking-tight uppercase">{cat.name}</h3>
-                <div className="flex gap-16 px-4">
-                  <HeaderLabel label="View" />
-                  <HeaderLabel label="Create" />
-                  <HeaderLabel label="Edit" />
-                  <HeaderLabel label="Delete" />
-                </div>
-              </div>
-              <div className="divide-y divide-gray-50">
-                {cat.children.map((mod) => (
-                  <div key={mod.moduleId} className="px-8 py-5 flex items-center justify-between hover:bg-gray-50/30 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="w-2 h-2 rounded-full bg-primary/20"></div>
-                      <span className="text-sm font-bold text-gray-700">{mod.name}</span>
-                    </div>
-                    <div className="flex items-center gap-16 px-4">
-                      <Switch checked={mod.view} onChange={() => togglePermission(mod.moduleId, "view")} />
-                      <Switch checked={mod.add} onChange={() => togglePermission(mod.moduleId, "add")} />
-                      <Switch checked={mod.edit} onChange={() => togglePermission(mod.moduleId, "edit")} />
-                      <Switch checked={mod.delete} onChange={() => togglePermission(mod.moduleId, "delete")} />
+            <div key={cat.moduleId} className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 overflow-hidden group hover:shadow-md transition-all">
+              <div className="overflow-x-auto custom-scrollbar">
+                <div className="min-w-[540px]">
+                  <div className="bg-gray-50/50 px-4 sm:px-8 py-4 sm:py-5 border-b border-gray-100 flex items-center justify-between">
+                    <h3 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight uppercase">{cat.name}</h3>
+                    <div className="flex gap-8 sm:gap-12 md:gap-16 px-4">
+                      <HeaderLabel label="View" />
+                      <HeaderLabel label="Create" />
+                      <HeaderLabel label="Edit" />
+                      <HeaderLabel label="Delete" />
                     </div>
                   </div>
-                ))}
+                  <div className="divide-y divide-gray-50">
+                    {cat.children.map((mod) => (
+                      <div key={mod.moduleId} className="px-4 sm:px-8 py-3.5 sm:py-5 flex items-center justify-between hover:bg-gray-50/30 transition-colors">
+                        <div className="flex items-center gap-3 sm:gap-4">
+                          <div className="w-2 h-2 rounded-full bg-primary/20"></div>
+                          <span className="text-xs sm:text-sm font-bold text-gray-700">{mod.name}</span>
+                        </div>
+                        <div className="flex items-center gap-8 sm:gap-12 md:gap-16 px-4">
+                          <Switch checked={mod.view} onChange={() => togglePermission(mod.moduleId, "view")} />
+                          <Switch checked={mod.add} onChange={() => togglePermission(mod.moduleId, "add")} />
+                          <Switch checked={mod.edit} onChange={() => togglePermission(mod.moduleId, "edit")} />
+                          <Switch checked={mod.delete} onChange={() => togglePermission(mod.moduleId, "delete")} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           )) : (

@@ -285,9 +285,9 @@ export default function EmployeeMasterPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-2.5 sm:gap-3">
              <UserCircle className="w-8 h-8 text-primary" />
              Employee Directory
           </h1>
@@ -295,14 +295,14 @@ export default function EmployeeMasterPage() {
         </div>
         
         {canCreate && (
-          <Button onClick={handleOpenAdd} className="gap-2 px-6 shadow-xl shadow-primary/20">
+          <Button onClick={handleOpenAdd} className="gap-2 px-6 shadow-xl shadow-primary/20 w-full sm:w-auto justify-center">
             <UserPlus className="w-5 h-5" />
             Add Team Member
           </Button>
         )}
       </div>
 
-      <div className="flex items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 bg-white p-3.5 sm:p-4 rounded-2xl shadow-sm border border-gray-100">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input 
@@ -357,7 +357,7 @@ export default function EmployeeMasterPage() {
           className="space-y-6"
         >
           <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100">
-             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 items-start">
                 <Input
                   {...register("employeeCode")}
                   label="Emp Code"
@@ -385,7 +385,7 @@ export default function EmployeeMasterPage() {
              </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               <Input
                 {...register("email")}
                 label="Email Address"
@@ -411,7 +411,7 @@ export default function EmployeeMasterPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 items-end">
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block">Access Role</label>
                 <div className="relative flex items-center group">

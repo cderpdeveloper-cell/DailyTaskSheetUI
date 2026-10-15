@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -8,10 +8,12 @@ import {
   ChevronRight,
   LogOut,
   Layers,
-  LayoutDashboard
+  LayoutDashboard,
+  X
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useSidebarStore } from "@/store/useSidebarStore";
 import { menuService } from "@/services/api/menu.service";
 import { MenuItem } from "@/types/api.types";
 import { getIcon } from "@/utils/iconMapper";
@@ -20,6 +22,25 @@ export const Sidebar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, isAuthenticated } = useAuthStore();
+  const { isOpen: isMobileOpen, close: closeMobileSidebar } = useSidebarStore();
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    closeMobileSidebar();
+  }, [pathname, closeMobileSidebar]);
+
+  // Close mobile sidebar on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        closeMobileSidebar();
+      }
+    };
+    if (isMobileOpen) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMobileOpen, closeMobileSidebar]);
 
   // Dynamic roleID logic: try from user object fields or default to 1, but allow 0
   const roleId = useMemo(() => {
@@ -78,15 +99,24 @@ export const Sidebar = () => {
     const [isOpen, setIsOpen] = useState(isChildActive);
     const IconComponent = getIcon(item.icon);
 
+    const handleClick = () => {
+      if (hasChildren) {
+        setIsOpen(!isOpen);
+      } else {
+        router.push(path);
+        closeMobileSidebar();
+      }
+    };
+
     return (
       <div className="w-full">
         <div
           className={cn(
-            "w-full px-3 py-2 flex items-center justify-between rounded-lg transition-colors cursor-pointer group mb-1",
+            "w-full px-3 py-2.5 flex items-center justify-between rounded-lg transition-colors cursor-pointer group mb-1 touch-manipulation",
             isCurrent ? "bg-primary/5 text-primary" : "text-slate-600 hover:bg-slate-50",
             (isChildActive && !isCurrent) && "text-primary font-bold",
           )}
-          onClick={() => hasChildren ? setIsOpen(!isOpen) : router.push(path)}
+          onClick={handleClick}
         >
           <div className="flex items-center gap-3">
             <div className={cn(
@@ -127,30 +157,59 @@ export const Sidebar = () => {
   };
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-white border-r border-slate-100 z-50 flex flex-col">
-      <div className="p-6 border-b border-slate-50">
-        <Link href="/dashboard" className="flex items-center gap-2 mb-2 cursor-pointer transition-opacity hover:opacity-80">
-          <div className="p-2 bg-primary rounded-lg shadow-sm">
-            <LayoutDashboard className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-lg font-bold text-slate-800 tracking-tight">
-            Daily<span className="text-primary font-black">Work</span>
-          </span>
-        </Link>
-      </div>
+    <>
+      {/* Mobile & Tablet Backdrop */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 lg:hidden animate-in fade-in duration-200"
+          onClick={closeMobileSidebar}
+          aria-hidden="true"
+        />
+      )}
 
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto no-scrollbar">
-        {isLoading ? (
-          <div className="space-y-2">
-            {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-10 bg-slate-50 animate-pulse rounded-lg"></div>)}
-          </div>
-        ) : menuData
-          .sort((a: MenuItem, b: MenuItem) => a.displayOrder - b.displayOrder)
-          .map((item: MenuItem) => (
-            <NavItem key={item.moduleId} item={item} />
-          ))}
-      </nav>
+      {/* Sidebar Container */}
+      <aside
+        className={cn(
+          "fixed left-0 top-0 h-screen w-64 bg-white border-r border-slate-100 z-50 flex flex-col transition-transform duration-300 ease-in-out shadow-lg lg:shadow-none",
+          isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        )}
+      >
+        <div className="p-4 sm:p-6 border-b border-slate-50 flex items-center justify-between">
+          <Link
+            href="/dashboard"
+            onClick={closeMobileSidebar}
+            className="flex items-center gap-2 cursor-pointer transition-opacity hover:opacity-80"
+          >
+            <div className="p-2 bg-primary rounded-lg shadow-sm">
+              <LayoutDashboard className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-lg font-bold text-slate-800 tracking-tight">
+              Daily<span className="text-primary font-black">Work</span>
+            </span>
+          </Link>
 
-    </aside>
+          {/* Close button for mobile & tablet */}
+          <button
+            onClick={closeMobileSidebar}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 lg:hidden transition-colors"
+            aria-label="Close Sidebar"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto no-scrollbar">
+          {isLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-10 bg-slate-50 animate-pulse rounded-lg"></div>)}
+            </div>
+          ) : menuData
+            .sort((a: MenuItem, b: MenuItem) => a.displayOrder - b.displayOrder)
+            .map((item: MenuItem) => (
+              <NavItem key={item.moduleId} item={item} />
+            ))}
+        </nav>
+      </aside>
+    </>
   );
 };

@@ -934,62 +934,65 @@ export default function TaskSheetPage() {
     <div className="flex flex-col gap-6 font-sans pb-10 animate-in fade-in duration-500">
 
       {/* 🟢 TOP NAV - FLOATING CARD */}
-      <div className="w-full bg-white/90 backdrop-blur-md border border-slate-200 shadow-sm rounded-2xl sticky top-2 z-[30]">
-        <div className="px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white"><FileText className="w-5 h-5" /></div>
-            <h1 className="text-lg font-bold text-slate-800">WorkLog Dashboard</h1>
+      <div className="w-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-sm rounded-2xl sticky top-2 z-[30] p-3 sm:px-6 sm:py-3.5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white shrink-0"><FileText className="w-4 h-4 sm:w-5 sm:h-5" /></div>
+            <div>
+              <h1 className="text-base sm:text-lg font-bold text-slate-800 leading-tight">WorkLog Dashboard</h1>
+              <p className="text-[10px] text-slate-400 font-medium sm:hidden">Daily Task Sheet</p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-slate-100 h-10 px-4 rounded-lg border border-slate-200">
-              <Calendar className="w-4 h-4 text-slate-500" />
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <div className="flex items-center gap-2 bg-slate-100 h-9 sm:h-10 px-2.5 sm:px-4 rounded-lg border border-slate-200">
+              <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 shrink-0" />
               <input type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} className="bg-transparent border-none focus:ring-0 text-xs font-bold text-slate-700 outline-none uppercase" />
             </div>
             <button
               onClick={() => { setIsHistoryModalOpen(true); setHistoryPage(1); setHistorySearch(""); }}
-              className="h-10 px-4 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs flex items-center gap-2 hover:bg-slate-50 transition-all"
+              className="h-9 sm:h-10 px-2.5 sm:px-4 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs flex items-center gap-1.5 sm:gap-2 hover:bg-slate-50 transition-all touch-manipulation"
               title="View Archive Explorer [ALT+H]"
             >
-              <History className="w-4 h-4" /> View Archive <span className="opacity-40 text-[9px] font-mono">[ALT+H]</span>
+              <History className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span>Archive</span> <span className="hidden sm:inline opacity-40 text-[9px] font-mono">[ALT+H]</span>
             </button>
 
             {/*  BREAK SETTING */}
-            <div className="flex items-center gap-2 bg-slate-50 h-10 px-3 rounded-lg border border-slate-200 group/setting transition-all hover:border-blue-300 hover:bg-white shadow-sm">
-              <div className="w-7 h-7 bg-blue-600 rounded flex items-center justify-center text-white shadow-sm shadow-blue-100">
-                <Coffee className="w-4 h-4" />
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 h-9 sm:h-10 px-2.5 sm:px-3 rounded-lg border border-slate-200 group/setting transition-all hover:border-blue-300 hover:bg-white shadow-xs">
+              <div className="w-6 h-6 sm:w-7 sm:h-7 bg-blue-600 rounded flex items-center justify-center text-white shadow-xs shadow-blue-100 shrink-0">
+                <Coffee className="w-3 h-3 sm:w-4 sm:h-4" />
               </div>
               <div className="flex flex-col">
-                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Break Time</span>
+                <span className="text-[7px] sm:text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5 sm:mb-1">Break</span>
                 <div className="flex items-baseline gap-0.5">
                   <input
                     type="number"
                     value={breakDuration}
                     onChange={(e) => handleBreakDurationChange(parseInt(e.target.value) || 0)}
-                    className="bg-transparent border-none focus:ring-0 text-xs font-black text-slate-800 outline-none w-8 p-0 hide-arrows text-center"
+                    className="bg-transparent border-none focus:ring-0 text-xs font-black text-slate-800 outline-none w-7 sm:w-8 p-0 hide-arrows text-center"
                   />
-                  <span className="text-[10px] font-bold text-slate-400">m</span>
+                  <span className="text-[9px] sm:text-[10px] font-bold text-slate-400">m</span>
                 </div>
               </div>
             </div>
 
-            <button onClick={handleSave} disabled={saveMutation.isPending || updateMutation.isPending} className="h-10 px-6 bg-blue-600 text-white rounded-lg font-bold text-xs flex items-center gap-2 hover:bg-blue-700 shadow-sm transition-all group">
-              {(saveMutation.isPending || updateMutation.isPending) ? <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
-              {editingReportId ? 'Update Changes' : 'Save Changes'} <span className="opacity-40 ml-1 text-[9px] font-mono">[CTRL+S]</span>
+            <button onClick={handleSave} disabled={saveMutation.isPending || updateMutation.isPending} className="h-9 sm:h-10 px-4 sm:px-6 bg-blue-600 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-2 hover:bg-blue-700 shadow-sm transition-all group flex-1 sm:flex-none touch-manipulation">
+              {(saveMutation.isPending || updateMutation.isPending) ? <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+              <span>{editingReportId ? 'Update' : 'Save'} <span className="hidden sm:inline">Changes</span></span> <span className="hidden sm:inline opacity-40 ml-1 text-[9px] font-mono">[CTRL+S]</span>
             </button>
           </div>
         </div>
       </div>
 
-      <div className="w-full space-y-6">
+      <div className="w-full space-y-4 sm:space-y-6">
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold text-slate-800 tracking-tight">Daily Task Sheet</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">Daily Task Sheet</h2>
           </div>
           {canCreate && (
-            <button onClick={addWork} className="h-10 px-5 bg-slate-800 text-white rounded-lg font-bold text-xs flex items-center gap-3 hover:bg-slate-900 transition-all active:scale-95">
-              <Plus className="w-4 h-4" /> Add Entry <span className="opacity-40 text-[9px] font-mono">[ALT+N]</span>
+            <button onClick={addWork} className="h-9 sm:h-10 px-4 sm:px-5 bg-slate-800 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-2 sm:gap-3 hover:bg-slate-900 transition-all active:scale-95 touch-manipulation">
+              <Plus className="w-4 h-4" /> Add Entry <span className="hidden sm:inline opacity-40 text-[9px] font-mono">[ALT+N]</span>
             </button>
           )}
         </div>
@@ -997,9 +1000,9 @@ export default function TaskSheetPage() {
         {/* 🏗️ HIERARCHICAL TASK LIST */}
         <div className="space-y-4">
           {works.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 bg-white border-2 border-dashed border-slate-200 rounded-2xl">
-              <Briefcase className="w-12 h-12 text-slate-200 mb-4" />
-              <h3 className="text-lg font-bold text-slate-400 uppercase tracking-widest">No Active Sessions</h3>
+            <div className="flex flex-col items-center justify-center py-12 sm:py-20 bg-white border-2 border-dashed border-slate-200 rounded-2xl px-4 text-center">
+              <Briefcase className="w-10 h-10 sm:w-12 sm:h-12 text-slate-200 mb-4" />
+              <h3 className="text-base sm:text-lg font-bold text-slate-400 uppercase tracking-widest">No Active Sessions</h3>
               <p className="text-slate-300 text-xs mt-2">Add a new work entry to begin your daily log.</p>
             </div>
           ) : works.map((work, idx) => {
@@ -1024,12 +1027,12 @@ export default function TaskSheetPage() {
                 {/* COLLAPSED HEADER / SUMMARY TIER */}
                 <div
                   onClick={() => setExpandedIndex(isExpanded ? null : idx)}
-                  className={`flex items-center justify-between px-6 py-4 cursor-pointer select-none transition-colors rounded-t-xl ${!isExpanded ? 'bg-white' : 'bg-slate-50 border-b border-slate-100'}`}
+                  className={`flex items-center justify-between p-3.5 sm:px-6 sm:py-4 cursor-pointer select-none transition-colors rounded-t-xl gap-2 ${!isExpanded ? 'bg-white' : 'bg-slate-50 border-b border-slate-100'}`}
                 >
-                  <div className="flex items-center gap-4 flex-1">
+                  <div className="flex items-center gap-2.5 sm:gap-4 flex-1 min-w-0">
                     {!isExpanded && (
                       <div
-                        className="text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing px-2 -ml-2"
+                        className="text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing px-1 sm:px-2 -ml-1 sm:-ml-2 shrink-0 hidden sm:block"
                         title="Drag to reorder"
                         onMouseEnter={() => setDragEnabledIndex(idx)}
                         onMouseLeave={() => setDragEnabledIndex(null)}
@@ -1038,30 +1041,30 @@ export default function TaskSheetPage() {
                         <GripVertical className="w-5 h-5" />
                       </div>
                     )}
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${isExpanded ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'}`}>#{idx + 1}</div>
+                    <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${isExpanded ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'}`}>#{idx + 1}</div>
                     {!isExpanded ? (
-                      <div className="flex items-center gap-4 text-xs">
-                        <span className="font-bold text-slate-700 uppercase tracking-wide">{work.title || "Untitled Task"}</span>
-                        <span className="text-slate-200">|</span>
-                        <span className="text-slate-500 italic">{projectName}</span>
-                        <span className="text-slate-200">|</span>
-                        <div className="flex items-center gap-1.5 text-slate-400 font-bold"><Clock className="w-3.5 h-3.5" /> {duration}</div>
+                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-3 text-xs min-w-0">
+                        <span className="font-bold text-slate-700 uppercase tracking-wide truncate max-w-[130px] sm:max-w-xs">{work.title || "Untitled Task"}</span>
+                        <span className="text-slate-300 hidden sm:inline">|</span>
+                        <span className="text-slate-500 italic truncate max-w-[110px] sm:max-w-none text-[11px] sm:text-xs">{projectName}</span>
+                        <span className="text-slate-300 hidden sm:inline">|</span>
+                        <div className="flex items-center gap-1 text-slate-400 font-bold text-[11px] sm:text-xs shrink-0"><Clock className="w-3.5 h-3.5" /> {duration}</div>
                         {work.isAiUsed && (
                           <>
-                            <span className="text-slate-200">|</span>
-                            <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 border border-indigo-100">
-                              <Bot className="w-3 h-3 text-indigo-600" /> {work.aiModel || "AI Used"}
+                            <span className="text-slate-300 hidden sm:inline">|</span>
+                            <span className="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold flex items-center gap-1 border border-indigo-100 shrink-0">
+                              <Bot className="w-3 h-3 text-indigo-600" /> {work.aiModel || "AI"}
                             </span>
                           </>
                         )}
                       </div>
                     ) : (
-                      <h3 className="font-bold text-slate-700 text-sm italic tracking-tight">Main Entry Mapping (Session #{idx + 1})</h3>
+                      <h3 className="font-bold text-slate-700 text-xs sm:text-sm italic tracking-tight truncate">Main Entry Mapping (Session #{idx + 1})</h3>
                     )}
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 sm:gap-4 shrink-0">
                     {!isExpanded && (
-                      <button onClick={(e) => { e.stopPropagation(); removeWork(idx); }} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); removeWork(idx); }} className="text-slate-300 hover:text-red-500 transition-colors p-1" aria-label="Delete Entry"><Trash2 className="w-4 h-4" /></button>
                     )}
                     {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
                   </div>
@@ -1069,9 +1072,9 @@ export default function TaskSheetPage() {
 
                 {/* FULL EDIT VIEW (VISIBLE WHEN EXPANDED) */}
                 {isExpanded && (
-                  <div className="flex flex-col md:flex-row animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="flex flex-col xl:flex-row animate-in fade-in slide-in-from-top-2 duration-300">
                     {/* DETAIL TIER (LEFT) */}
-                    <div className="flex-1 p-6 space-y-6 border-b md:border-b-0 md:border-r border-slate-200">
+                    <div className="flex-1 p-3.5 sm:p-6 space-y-4 sm:space-y-6 border-b xl:border-b-0 xl:border-r border-slate-200">
                       <div className="space-y-1.5 p-2 bg-slate-50/50 border border-slate-100 rounded-lg">
                         <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 tracking-wide">Task Title</label>
                         <input
@@ -1082,7 +1085,7 @@ export default function TaskSheetPage() {
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                         <div className="space-y-1">
                           <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 tracking-wide">Project Scope</label>
                           <SearchableSelect
@@ -1161,10 +1164,10 @@ export default function TaskSheetPage() {
                         )}
                       </div>
 
-                      <div className="bg-white border border-slate-200 rounded-lg focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-50 transition-all flex flex-col h-48 overflow-hidden px-4 pt-3 pb-1">
+                      <div className="bg-white border border-slate-200 rounded-lg focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-50 transition-all flex flex-col h-36 sm:h-48 overflow-hidden px-3.5 sm:px-4 pt-3 pb-1">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Activity Narrative</label>
                         <textarea
-                          className="w-full bg-transparent border-none text-sm font-bold text-slate-700 focus:ring-0 outline-none flex-1 resize-none placeholder:font-normal placeholder:text-slate-200 leading-relaxed no-scrollbar"
+                          className="w-full bg-transparent border-none text-xs sm:text-sm font-medium sm:font-bold text-slate-700 focus:ring-0 outline-none flex-1 resize-none placeholder:font-normal placeholder:text-slate-200 leading-relaxed no-scrollbar"
                           placeholder="Elaborate on work performed..."
                           value={work.description}
                           onChange={(e) => updateWork(idx, 'description', e.target.value)}
@@ -1173,10 +1176,10 @@ export default function TaskSheetPage() {
                     </div>
 
                     {/* TIME LOG TIER (RIGHT) */}
-                    <div className="w-full md:w-[420px] bg-slate-50/10 p-6 flex flex-col">
+                    <div className="w-full xl:w-[400px] bg-slate-50/10 p-3.5 sm:p-6 flex flex-col">
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2"><Clock className="w-3 h-3" /> Time Sessions</h4>
-                        <button onClick={() => addTimeLog(idx)} className="text-[11px] font-bold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg flex items-center gap-2 transition-all active:scale-95">
+                        <button onClick={() => addTimeLog(idx)} className="text-[11px] font-bold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg flex items-center gap-2 transition-all active:scale-95 touch-manipulation">
                           <Plus className="w-3.5 h-3.5" /> Append session
                         </button>
                       </div>
@@ -1401,7 +1404,7 @@ export default function TaskSheetPage() {
             </div>
 
             {/* ⌨️ KEYBOARD SHORTCUT HELPER BAR */}
-            <div className="px-5 py-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 select-none overflow-x-auto no-scrollbar">
+            <div className="hidden sm:flex px-5 py-2 bg-slate-50 border-t border-slate-100 items-center justify-between text-[10px] text-slate-500 select-none overflow-x-auto no-scrollbar">
               <div className="flex items-center gap-2">
                 <span className="flex items-center gap-1 font-medium">
                   <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-mono shadow-2xs font-bold text-slate-700">↑/↓</kbd> Select

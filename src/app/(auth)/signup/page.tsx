@@ -51,7 +51,7 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 font-sans">
-      <div className="max-w-md w-full bg-white rounded-3xl border border-slate-200 shadow-2xl shadow-blue-500/5 p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="max-w-md w-full bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-2xl shadow-blue-500/5 p-5 sm:p-8 space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
         
         <button 
           onClick={() => router.push('/login')}
@@ -62,7 +62,7 @@ export default function SignupPage() {
         </button>
 
         <div className="space-y-2">
-            <h1 className="text-3xl font-black text-slate-800 tracking-tighter">
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tighter">
                 Create <span className="text-blue-600">Account</span>
             </h1>
             <p className="text-sm font-medium text-slate-400 lowercase italic tracking-tight">

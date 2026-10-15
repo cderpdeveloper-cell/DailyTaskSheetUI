@@ -21,16 +21,16 @@ export const Table = <T extends { [key: string]: any }>({
   isLoading,
 }: TableProps<T>) => {
   return (
-    <div className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+    <div className="w-full bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="overflow-x-auto custom-scrollbar">
+        <table className="w-full text-left border-collapse min-w-[500px]">
           <thead>
             <tr className="bg-gray-50/50">
               {columns.map((col, i) => (
                 <th 
                   key={i} 
                   className={cn(
-                    "px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 leading-none sticky top-0 bg-gray-50/80 backdrop-blur-sm z-10",
+                    "px-3.5 sm:px-6 py-3 sm:py-4 text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 leading-none sticky top-0 bg-gray-50/80 backdrop-blur-sm z-10 whitespace-nowrap",
                     col.className
                   )}
                 >
@@ -44,7 +44,7 @@ export const Table = <T extends { [key: string]: any }>({
               [1, 2, 3, 4, 5].map((i) => (
                 <tr key={i} className="animate-pulse">
                   {columns.map((_, j) => (
-                    <td key={j} className="px-6 py-4 border-b border-gray-50">
+                    <td key={j} className="px-3.5 sm:px-6 py-3 sm:py-4 border-b border-gray-50">
                       <div className="h-4 bg-gray-100 rounded-lg w-full"></div>
                     </td>
                   ))}
@@ -54,7 +54,7 @@ export const Table = <T extends { [key: string]: any }>({
                 <tr>
                     <td 
                       colSpan={columns.length} 
-                      className="px-6 py-12 text-center text-gray-400 font-medium italic"
+                      className="px-4 sm:px-6 py-8 sm:py-12 text-center text-gray-400 font-medium italic text-xs sm:text-sm"
                     >
                       No records found matching your criteria.
                     </td>
@@ -66,7 +66,7 @@ export const Table = <T extends { [key: string]: any }>({
                     <td 
                       key={j} 
                       className={cn(
-                        "px-6 py-4 text-sm text-gray-700 transition-all font-medium",
+                        "px-3.5 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-700 transition-all font-medium",
                         col.className
                       )}
                     >
